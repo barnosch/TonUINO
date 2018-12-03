@@ -248,7 +248,21 @@ void loop() {
       ignorePauseButton = true;
     }
 
+    // Tausch der Funktion. Rechter Knopf. Kurzer Druck, Lautstärke erhöhen, langer Druck nächster Titel
     if (upButton.pressedFor(LONG_PRESS)) {
+      nextTrack(random(65536));
+      ignoreUpButton = true;
+    } else if (upButton.wasReleased()) {
+      if (!ignoreUpButton) {
+        Serial.println(F("Volume Up"));
+        mp3.increaseVolume();
+     }
+    else
+    ignoreUpButton = false;
+    }
+    
+ /*   Original Funktion
+      if (upButton.pressedFor(LONG_PRESS)) {
       Serial.println(F("Volume Up"));
       mp3.increaseVolume();
       ignoreUpButton = true;
@@ -258,7 +272,22 @@ void loop() {
       else
         ignoreUpButton = false;
     }
+    */
+    
+    // Tausch der Funktion. Linker Knopf. Kurzer Druck, Lautstärke verringern, langer Druck vorheriger Titel
+    if (downButton.pressedFor(LONG_PRESS)) {
+      previousTrack();
+      ignoreDownButton = true;
+    } else if (downButton.wasReleased()) {
+      if (!ignoreDownButton) {
+        Serial.println(F("Volume Down"));
+        mp3.decreaseVolume();
+    }
+    else
+    ignoreDownButton = false;
+    }
 
+    /* Original Funktion
     if (downButton.pressedFor(LONG_PRESS)) {
       Serial.println(F("Volume Down"));
       mp3.decreaseVolume();
@@ -269,6 +298,7 @@ void loop() {
       else
         ignoreDownButton = false;
     }
+    */
     // Ende der Buttons
   } while (!mfrc522.PICC_IsNewCardPresent());
 
