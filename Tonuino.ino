@@ -214,7 +214,7 @@ void setup() {
       EEPROM.write(i, 0);
     }
   }
-
+mp3.playMp3FolderTrack(998); //Startmelodie muss im mp3 Ordner liegen und so beginnen 998_blaxxxbla.mp3
 }
 
 void loop() {
