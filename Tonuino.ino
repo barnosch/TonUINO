@@ -5,6 +5,18 @@
 #include <SPI.h>
 #include <SoftwareSerial.h>
 
+/*
+  status led:
+  -----------
+  If a led is connected to pin 6, limited status information is given using that led.
+  The led is solid on when TonUINO is playing a track and it is pulsing slowly when
+  TonUINO is idle. When TonUINO is in setup new nfc tag or erase nfc tag mode, the
+  led is blinking every 500ms. And last but not not least, the led bursts 4 times when
+  TonUINO is locked or unlocked.
+*/
+#define STATUSLED
+const uint8_t statusLedPin = 6; // pin used for status led
+
 // DFPlayer Mini
 SoftwareSerial mySoftwareSerial(2, 3); // RX, TX
 uint16_t numTracksInFolder;
@@ -204,6 +216,12 @@ void setup() {
   for (byte i = 0; i < 6; i++) {
     key.keyByte[i] = 0xFF;
   }
+  
+  #if defined(STATUSLED)
+  Serial.println(F("init led"));
+  pinMode(statusLedPin, OUTPUT);
+  digitalWrite(statusLedPin, HIGH);
+  #endif
 
   // RESET --- ALLE DREI KNÖPFE BEIM STARTEN GEDRÜCKT HALTEN -> alle bekannten
   // Karten werden gelöscht
@@ -247,6 +265,7 @@ void loop() {
       }
       ignorePauseButton = true;
     }
+    
 
     // Tausch der Funktion. Rechter Knopf. Kurzer Druck, Lautstärke erhöhen, langer Druck nächster Titel
     if (upButton.pressedFor(LONG_PRESS)) {
@@ -362,6 +381,67 @@ void loop() {
   mfrc522.PICC_HaltA();
   mfrc522.PCD_StopCrypto1();
 }
+
+#if defined(STATUSLED)
+// fade in/out status led while beeing idle, during playback set to full brightness
+void fadeStatusLed(bool isPlaying) {
+  static bool statusLedDirection = false;
+  static int16_t statusLedValue = 255;
+  static uint32_t statusLedOldMillis;
+
+  // TonUINO is playing, set status led to full brightness
+  if (isPlaying) {
+    statusLedValue = 255;
+    digitalWrite(statusLedPin, true);
+  }
+  // TonUINO is not playing, fade status led in/out
+  else {
+    uint32_t statusLedNewMillis = millis();
+    if (statusLedNewMillis - statusLedOldMillis >= 100) {
+      statusLedOldMillis = statusLedNewMillis;
+      if (statusLedDirection) {
+        statusLedValue += 10;
+        if (statusLedValue >= 255) {
+          statusLedValue = 255;
+          statusLedDirection = !statusLedDirection;
+        }
+      }
+      else {
+        statusLedValue -= 10;
+        if (statusLedValue <= 0) {
+          statusLedValue = 0;
+          statusLedDirection = !statusLedDirection;
+        }
+      }
+      analogWrite(statusLedPin, statusLedValue);
+    }
+  }
+}
+
+// blink status led every blinkInterval milliseconds
+void blinkStatusLed(uint16_t blinkInterval) {
+  static bool statusLedState;
+  static uint32_t statusLedOldMillis;
+
+  uint32_t statusLedNewMillis = millis();
+  if (statusLedNewMillis - statusLedOldMillis >= blinkInterval) {
+    statusLedOldMillis = statusLedNewMillis;
+    statusLedState = !statusLedState;
+    digitalWrite(statusLedPin, statusLedState);
+  }
+}
+
+// burst status led 4 times
+void burstStatusLed() {
+  bool statusLedState = true;
+
+  for (uint8_t i = 0; i < 8; i++) {
+    statusLedState = !statusLedState;
+    digitalWrite(statusLedPin, statusLedState);
+    delay(100);
+  }
+}
+#endif
 
 int voiceMenu(int numberOfOptions, int startMessage, int messageOffset,
               bool preview = false, int previewFromFolder = 0) {
