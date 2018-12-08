@@ -5,8 +5,7 @@
 #include <SPI.h>
 #include <SoftwareSerial.h>
 
-/*
-  status led:
+/*  Status led:
   -----------
   If a led is connected to pin 6, limited status information is given using that led.
   The led is solid on when TonUINO is playing a track and it is pulsing slowly when
@@ -16,6 +15,7 @@
 */
 #define STATUSLED
 const uint8_t statusLedPin = 6; // pin used for status led
+const uint16_t ledBlinkInterval = 500; // led blink interval (in milliseconds)
 
 // DFPlayer Mini
 SoftwareSerial mySoftwareSerial(2, 3); // RX, TX
@@ -173,7 +173,6 @@ MFRC522::StatusCode status;
 #define buttonUp A1
 #define buttonDown A2
 #define busyPin 4
-
 #define LONG_PRESS 1000
 
 Button pauseButton(buttonPause);
@@ -194,7 +193,7 @@ void setup() {
   randomSeed(analogRead(A0)); // Zufallsgenerator initialisieren
 
   Serial.println(F("TonUINO Version 2.0"));
-  Serial.println(F("(c) Thorsten Voß"));
+  Serial.println(F("(c) Thorsten Voß inkl Barni Mods"));
 
   // Knöpfe mit PullUp
   pinMode(buttonPause, INPUT_PULLUP);
@@ -206,7 +205,7 @@ void setup() {
 
   // DFPlayer Mini initialisieren
   mp3.begin();
-  mp3.setVolume(15);
+  mp3.setVolume(28);  //Maximum ist 30. Standard ist 15
 
   // NFC Leser initialisieren
   SPI.begin();        // Init SPI bus
@@ -237,6 +236,9 @@ mp3.playMp3FolderTrack(998); //Startmelodie muss im mp3 Ordner liegen und so beg
 
 void loop() {
   do {
+    #if defined(STATUSLED)
+       blinkStatusLed(ledBlinkInterval);
+    #endif
     mp3.loop();
     // Buttons werden nun über JS_Button gehandelt, dadurch kann jede Taste
     // doppelt belegt werden
@@ -266,8 +268,7 @@ void loop() {
       ignorePauseButton = true;
     }
     
-
-    // Tausch der Funktion. Rechter Knopf. Kurzer Druck, Lautstärke erhöhen, langer Druck nächster Titel
+    /* Tausch der Funktion. Rechter Knopf. Kurzer Druck, Lautstärke erhöhen, langer Druck nächster Titel
     if (upButton.pressedFor(LONG_PRESS)) {
       nextTrack(random(65536));
       ignoreUpButton = true;
@@ -279,8 +280,9 @@ void loop() {
     else
     ignoreUpButton = false;
     }
+    */
     
- /*   Original Funktion
+ //   Original Funktion. Rechter Knopf
       if (upButton.pressedFor(LONG_PRESS)) {
       Serial.println(F("Volume Up"));
       mp3.increaseVolume();
@@ -291,9 +293,8 @@ void loop() {
       else
         ignoreUpButton = false;
     }
-    */
-    
-    // Tausch der Funktion. Linker Knopf. Kurzer Druck, Lautstärke verringern, langer Druck vorheriger Titel
+   
+    /* Tausch der Funktion. Linker Knopf. Kurzer Druck, Lautstärke verringern, langer Druck vorheriger Titel
     if (downButton.pressedFor(LONG_PRESS)) {
       previousTrack();
       ignoreDownButton = true;
@@ -305,8 +306,9 @@ void loop() {
     else
     ignoreDownButton = false;
     }
+    */
 
-    /* Original Funktion
+    // Original Funktion Linker Knopf
     if (downButton.pressedFor(LONG_PRESS)) {
       Serial.println(F("Volume Down"));
       mp3.decreaseVolume();
@@ -317,7 +319,7 @@ void loop() {
       else
         ignoreDownButton = false;
     }
-    */
+
     // Ende der Buttons
   } while (!mfrc522.PICC_IsNewCardPresent());
 
