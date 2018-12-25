@@ -1,5 +1,5 @@
 // 5 Tasten + LED MOD
-// not yet tested
+// LED macht noch was sie will
 #include <DFMiniMp3.h>
 #include <EEPROM.h>
 #include <JC_Button.h>
@@ -13,8 +13,6 @@
 
 const uint8_t mp3BusyPin = 4;                       // reports play state of DFPlayer Mini (LOW = playing) doppelt mit busyPin?
 const uint8_t statusLedPin = 6;                     // pin used for status led
-const uint8_t mp3StartVolume = 10;                  // initial volume of DFPlayer Mini
-// const uint8_t mp3MaxVolume = 27;                    // maximal volume of DFPlayer Mini
 const uint16_t ledBlinkInterval = 500; // led blink interval (in milliseconds)
 
 // DFPlayer Mini
@@ -39,9 +37,6 @@ int voiceMenu(int numberOfOptions, int startMessage, int messageOffset,
 
 bool knownCard = false;
 
-// implement a notification class,
-// its member methods will get called
-//
 class Mp3Notify {
 public:
   static void OnError(uint16_t errorCode) {
@@ -172,11 +167,10 @@ MFRC522::StatusCode status;
 #define buttonPause A0
 #define buttonUp A1
 #define buttonDown A2
-#define buttonVolUp A3         //Zusätzliche Buttons 
-#define buttonVolDown A4       //Zusätzliche Buttons 
-#define busyPin 4
+#define buttonVolUp A3         //Zusätzliche Buttons Vol up
+#define buttonVolDown A4       //Zusätzliche Buttons Vol down
 
-#define LONG_PRESS 1000
+#define LONG_PRESS 3000
 
 Button pauseButton(buttonPause);
 Button upButton(buttonUp);
@@ -189,7 +183,7 @@ bool ignoreDownButton = false;
 
 uint8_t numberOfCards = 0;
 
-bool isPlaying() { return !digitalRead(busyPin); }
+bool isPlaying() { return !digitalRead(mp3BusyPin); }
 
 // waits for current playing track to finish
 void waitPlaybackToFinish() {
@@ -199,16 +193,15 @@ void waitPlaybackToFinish() {
   while (!digitalRead(mp3BusyPin));
 }
 
-#if defined(STATUSLED)
 // fade in/out status led while beeing idle, during playback set to full brightness
 void fadeStatusLed(bool isPlaying) {
   static bool statusLedDirection = false;
   static int16_t statusLedValue = 255;
   static uint64_t statusLedOldMillis;
 
-  // TonUINO is playing, set status led to full brightness
+  // TonUINO is playing, set status led to 80 brightness (full=255)
   if (isPlaying) {
-    statusLedValue = 255;
+    statusLedValue = 80;
     digitalWrite(statusLedPin, true);
   }
   // TonUINO is not playing, fade status led in/out
@@ -258,10 +251,8 @@ void burstStatusLed() {
     delay(100);
   }
 }
-#endif
 
 void setup() {
-
   Serial.begin(115200); 
   randomSeed(analogRead(A0)); // Zufallsgenerator initialisieren
 
@@ -277,21 +268,16 @@ void setup() {
   pinMode(buttonVolDown, INPUT_PULLUP);       //Zusätzliche Buttons 
 
   // Busy Pin
-  pinMode(busyPin, INPUT);
-
-  #if defined(STATUSLED)
-  Serial.println(F("init led"));
-  pinMode(statusLedPin, OUTPUT);
-  digitalWrite(statusLedPin, HIGH);
-  #endif
+  pinMode(mp3BusyPin, INPUT);
 
   // DFPlayer Mini initialisieren
   mp3.begin();
-  delay(2000);
-  Serial.print(F("  volume "));
-  Serial.println(mp3StartVolume);
-  mp3.setVolume(mp3StartVolume);
-  mp3.setVolume(26);  //Maximum ist 30. Standard ist 15
+  mp3.setVolume(14);  //Maximum ist 30. Standard ist 15
+
+  pinMode(statusLedPin, OUTPUT);
+  digitalWrite(statusLedPin, HIGH);
+  delay(5000);
+  digitalWrite(statusLedPin, LOW);
 
   // NFC Leser initialisieren
   SPI.begin();        // Init SPI bus
@@ -302,8 +288,7 @@ void setup() {
     key.keyByte[i] = 0xFF;
   }
 
-  // RESET --- ALLE DREI KNÖPFE BEIM STARTEN GEDRÜCKT HALTEN -> alle bekannten
-  // Karten werden gelöscht
+  // RESET --- ALLE DREI KNÖPFE BEIM STARTEN GEDRÜCKT HALTEN -> alle bekannten Karten werden gelöscht
   if (digitalRead(buttonPause) == LOW && digitalRead(buttonUp) == LOW &&
       digitalRead(buttonDown) == LOW) {
     Serial.println(F("Reset -> EEPROM wird gelöscht"));
@@ -317,18 +302,13 @@ mp3.playMp3FolderTrack(998); //Startmelodie muss im mp3 Ordner liegen und so beg
 void loop() {
   do {
     mp3.loop();
-    // Buttons werden nun über JS_Button gehandelt, dadurch kann jede Taste
-    // doppelt belegt werden
+    // Buttons werden nun über JS_Button gehandelt, dadurch kann jede Taste doppelt belegt werden
     pauseButton.read();
     upButton.read();
     downButton.read();
     VolUpButton.read();        //Zusätzliche Buttons 
     VolDownButton.read();      //Zusätzliche Buttons 
-
-    #if defined(STATUSLED)
-    fadeStatusLed(isPlaying);
-    #endif
-
+    
     if (pauseButton.wasReleased()) {
       if (ignorePauseButton == false)
         if (isPlaying())
@@ -336,6 +316,7 @@ void loop() {
         else
           mp3.start();
       ignorePauseButton = false;
+      blinkStatusLed(isPlaying);
     } else if (pauseButton.pressedFor(LONG_PRESS) &&
                ignorePauseButton == false) {
       if (isPlaying())
@@ -441,10 +422,8 @@ int voiceMenu(int numberOfOptions, int startMessage, int messageOffset,
     pauseButton.read();
     upButton.read();
     downButton.read();
-    #if defined(STATUSLED)
-          blinkStatusLed(ledBlinkInterval);
-    #endif
     mp3.loop();
+   
     if (pauseButton.wasPressed()) {
       if (returnValue != 0)
         return returnValue;
