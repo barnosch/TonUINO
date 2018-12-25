@@ -1,4 +1,5 @@
 Barnosch Version
+5 Tasten Mod + LED Status
 
 # TonUINO
 Die DIY Musikbox (nicht nur) für Kinder
