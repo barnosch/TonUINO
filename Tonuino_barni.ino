@@ -1,19 +1,14 @@
-// 5 Tasten + LED MOD
-// LED macht noch was sie will
+/* Barnosch Mod
+5 Tasten + LED MOD
+Pause: Led ist aus
+Play : Led fadet ein und aus
+*/
 #include <DFMiniMp3.h>
 #include <EEPROM.h>
 #include <JC_Button.h>
 #include <MFRC522.h>
 #include <SPI.h>
 #include <SoftwareSerial.h>
-
-// define global constants
-// LED from https://github.com/seisfeld/TonUINO/blob/master/tonuino.ino
-#define STATUSLED
-
-const uint8_t mp3BusyPin = 4;                       // reports play state of DFPlayer Mini (LOW = playing) doppelt mit busyPin?
-const uint8_t statusLedPin = 6;                     // pin used for status led
-const uint16_t ledBlinkInterval = 500; // led blink interval (in milliseconds)
 
 // DFPlayer Mini
 SoftwareSerial mySoftwareSerial(2, 3); // RX, TX
@@ -164,47 +159,40 @@ byte blockAddr = 4;
 byte trailerBlock = 7;
 MFRC522::StatusCode status;
 
+#define INITIAL_VOLUME 12       // Startlautstärke               
+
 #define buttonPause A0
 #define buttonUp A1
 #define buttonDown A2
-#define buttonVolUp A3         //Zusätzliche Buttons Vol up
-#define buttonVolDown A4       //Zusätzliche Buttons Vol down
-
+#define buttonVolUp A3         //Zusätzlicher Knopf für Lautstärke hoch
+#define buttonVolDown A4       //Zusätzlicher Knopf für Lautstärke runter
+#define busyPin 4
+#define statusLedPin 6        // Pin für die Status led                            
 #define LONG_PRESS 3000
 
 Button pauseButton(buttonPause);
 Button upButton(buttonUp);
 Button downButton(buttonDown);
-Button VolUpButton(buttonVolUp);           //Neuer Knopf für Lautstärke hoch
-Button VolDownButton(buttonVolDown);       //Neuer Knopf für Lautstärke runter
+Button VolUpButton(buttonVolUp);         //Knopf für Lautstärke hoch
+Button VolDownButton(buttonVolDown);     //Knopf für Lautstärke runter
 bool ignorePauseButton = false;
 bool ignoreUpButton = false;
 bool ignoreDownButton = false;
 
 uint8_t numberOfCards = 0;
-
-bool isPlaying() { return !digitalRead(mp3BusyPin); }
-
-// waits for current playing track to finish
-void waitPlaybackToFinish() {
-  uint64_t waitPlaybackToStartMillis = millis();
-  delay(100);
-  while (digitalRead(mp3BusyPin)) if (millis() - waitPlaybackToStartMillis >= 10000) break;
-  while (!digitalRead(mp3BusyPin));
-}
-
+                
 // fade in/out status led while beeing idle, during playback set to full brightness
 void fadeStatusLed(bool isPlaying) {
   static bool statusLedDirection = false;
   static int16_t statusLedValue = 255;
   static uint64_t statusLedOldMillis;
 
-  // TonUINO is playing, set status led to 80 brightness (full=255)
-  if (isPlaying) {
-    statusLedValue = 80;
-    digitalWrite(statusLedPin, true);
+  // TonUINO spielt nicht (Pause), LED aus
+  if (!isPlaying) {                     // ursprüngliche Funktion mit !(ungleich) umgedreht
+    //statusLedValue = 255;
+    digitalWrite(statusLedPin, LOW);    // wenn an sein soll, wert auf true oder HIGH setzen
   }
-  // TonUINO is not playing, fade status led in/out
+  // TonUINO spielt, LED fadet ein und aus
   else {
     uint64_t statusLedNewMillis = millis();
     if (statusLedNewMillis - statusLedOldMillis >= 100) {
@@ -227,38 +215,16 @@ void fadeStatusLed(bool isPlaying) {
     }
   }
 }
-
-// blink status led every blinkInterval milliseconds
-void blinkStatusLed(uint16_t blinkInterval) {
-  static bool statusLedState;
-  static uint64_t statusLedOldMillis;
-
-  uint64_t statusLedNewMillis = millis();
-  if (statusLedNewMillis - statusLedOldMillis >= blinkInterval) {
-    statusLedOldMillis = statusLedNewMillis;
-    statusLedState = !statusLedState;
-    digitalWrite(statusLedPin, statusLedState);
-  }
-}
-
-// burst status led 4 times
-void burstStatusLed() {
-  bool statusLedState = true;
-
-  for (uint8_t i = 0; i < 8; i++) {
-    statusLedState = !statusLedState;
-    digitalWrite(statusLedPin, statusLedState);
-    delay(100);
-  }
-}
+      
+bool isPlaying() { return !digitalRead(busyPin); }
 
 void setup() {
-  Serial.begin(115200); 
+  Serial.begin(115200);                                  
   randomSeed(analogRead(A0)); // Zufallsgenerator initialisieren
 
   Serial.println(F("TonUINO Version 2.0"));
   Serial.println(F("(c) Thorsten Voß"));
-  Serial.println(F("5 Tasten + LED MOD"));
+  Serial.println(F("Barnosch 5 Tasten + LED MOD"));
 
   // Knöpfe mit PullUp
   pinMode(buttonPause, INPUT_PULLUP);
@@ -266,18 +232,19 @@ void setup() {
   pinMode(buttonDown, INPUT_PULLUP);
   pinMode(buttonVolUp, INPUT_PULLUP);         //Zusätzliche Buttons 
   pinMode(buttonVolDown, INPUT_PULLUP);       //Zusätzliche Buttons 
-
-  // Busy Pin
-  pinMode(mp3BusyPin, INPUT);
-
-  // DFPlayer Mini initialisieren
-  mp3.begin();
-  mp3.setVolume(14);  //Maximum ist 30. Standard ist 15
-
+                
+  Serial.println(F("init led"));
   pinMode(statusLedPin, OUTPUT);
   digitalWrite(statusLedPin, HIGH);
-  delay(5000);
-  digitalWrite(statusLedPin, LOW);
+
+  // Busy Pin
+  pinMode(busyPin, INPUT);
+  
+  // DFPlayer Mini initialisieren
+  mp3.begin();
+  mp3.setVolume(INITIAL_VOLUME);
+  Serial.print(F("Set INITIAL_VOLUME "));
+  Serial.println(INITIAL_VOLUME);                                
 
   // NFC Leser initialisieren
   SPI.begin();        // Init SPI bus
@@ -289,6 +256,7 @@ void setup() {
   }
 
   // RESET --- ALLE DREI KNÖPFE BEIM STARTEN GEDRÜCKT HALTEN -> alle bekannten Karten werden gelöscht
+                            
   if (digitalRead(buttonPause) == LOW && digitalRead(buttonUp) == LOW &&
       digitalRead(buttonDown) == LOW) {
     Serial.println(F("Reset -> EEPROM wird gelöscht"));
@@ -300,9 +268,12 @@ mp3.playMp3FolderTrack(998); //Startmelodie muss im mp3 Ordner liegen und so beg
 }
 
 void loop() {
-  do {
+  do {                   
+    fadeStatusLed(isPlaying());                                              
+          
     mp3.loop();
     // Buttons werden nun über JS_Button gehandelt, dadurch kann jede Taste doppelt belegt werden
+                            
     pauseButton.read();
     upButton.read();
     downButton.read();
@@ -316,38 +287,36 @@ void loop() {
         else
           mp3.start();
       ignorePauseButton = false;
-      blinkStatusLed(isPlaying);
+      
     } else if (pauseButton.pressedFor(LONG_PRESS) &&
                ignorePauseButton == false) {
-      if (isPlaying())
+      if (isPlaying())      
         mp3.playAdvertisement(currentTrack);
+      
       else {
         knownCard = false;
         mp3.playMp3FolderTrack(800);
         Serial.println(F("Karte resetten..."));
         resetCard();
         mfrc522.PICC_HaltA();
-        mfrc522.PCD_StopCrypto1();
+        mfrc522.PCD_StopCrypto1();                       
       }
       ignorePauseButton = true;
     }
 
-    if (VolUpButton.wasReleased()) {
-    Serial.println(F("Volume Up"));        
-    mp3.increaseVolume();                
+    if (VolUpButton.wasReleased()) {                                  
+      Serial.println(F("Volume Up"));                 
+      mp3.increaseVolume();                
     }
-  
     if (upButton.wasReleased()) {      
-    nextTrack(random(65536));             
+      nextTrack(random(65536));                               
     }
-
-    if (VolDownButton.wasReleased()) {
-    Serial.println(F("Volume Down"));
-    mp3.decreaseVolume();
+    if (VolDownButton.wasReleased()) {                     
+      Serial.println(F("Volume Down"));
+      mp3.decreaseVolume();                      
     } 
- 
     if (downButton.wasReleased()) {
-    previousTrack();
+      previousTrack();                         
     }
     // Ende der Buttons
   } while (!mfrc522.PICC_IsNewCardPresent());
