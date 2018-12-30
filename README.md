@@ -1,9 +1,11 @@
-Barnosch Version
+# Barnosch Version
 5 Tasten Mod + LED Status
+2 Zusätzliche Taster für die Lautstärke (A3 und A4)
+Pause: Led ist aus
+Play : Led fadet ein und aus
 
 # TonUINO
 Die DIY Musikbox (nicht nur) für Kinder
-
 
 # Change Log
 
