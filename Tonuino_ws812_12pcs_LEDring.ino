@@ -1,44 +1,46 @@
+/* Barnosch LED Ring Mod
+5 Tasten + LED Ring (12) MOD
+*/
 #include <DFMiniMp3.h>
 #include <EEPROM.h>
 #include <JC_Button.h>
 #include <MFRC522.h>
 #include <SPI.h>
 #include <SoftwareSerial.h>
+
 #include <FastLED.h> // FastLED-Library einbinden
 
-
-// nur für Startanimation, eigentlich nicht benötigt.
 #include <Adafruit_NeoPixel.h> Adafruit Neopixel-Library einbinden
   #ifdef __AVR__
   #include <avr/power.h>
   #endif
   #define PIN 6
-  #define NUM_LEDS 12           // 24
+  #define NUM_LEDS 12
   Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 
 
 // FastLED define und Brightness für Adafruit Neopixel
   FASTLED_USING_NAMESPACE
   #define DATA_PIN    6
+  //#define CLK_PIN   4
   #define LED_TYPE    WS2812
   #define COLOR_ORDER RGB
-  #define NUM_LEDS    12            // 24
+  #define NUM_LEDS    12
   CRGB leds[NUM_LEDS];
-  #define BRIGHTNESS1          1    // Helligkeit für FastLED Low (wenn z.B. KEINE Musik gespielt wird)
-  #define BRIGHTNESS2          30   // Helligkeit für FastLED High (wenn z.B Musik gespielt wird)
-  #define BRIGHTNESS3          50   // Helligkeit für FastLED bei Bestätigung z.B. Blinken o.ä.
-  #define STARTBRIGHTNESS      50   // Helligkeit für ADAFRUIT-Library
-  #define FRAMES_PER_SECOND  120    // 120
+  #define BRIGHTNESS1          3  // Helligkeit für FastLED Low (wenn z.B. KEINE Musik gespielt wird)
+  #define BRIGHTNESS2          30 // Helligkeit für FastLED High (wenn z.B Musik gespielt wird)
+  #define BRIGHTNESS3          50 // Helligkeit für FastLED bei Bestätigung z.B. Blinken o.ä.
+  #define STARTBRIGHTNESS      50 // Helligkeit für ADAFRUIT-Library
+  #define FRAMES_PER_SECOND  120 
   uint8_t gHue = 0; // rotating "base color" used by many of the patterns
 
 // DFPlayer Mini
 SoftwareSerial mySoftwareSerial(2, 3); // RX, TX
 uint16_t numTracksInFolder;
 uint16_t currentTrack;
-uint8_t volume; // Volume Variable
+uint8_t volume;                      // Volume Variable
 uint8_t minVolume;
 uint8_t maxVolume;
-const uint8_t busyPin = 4;                       // reports play state of DFPlayer Mini (LOW = playing)
 
 // this object stores nfc tag data
 struct nfcTagObject {
@@ -73,7 +75,6 @@ class Mp3Notify {
       Serial.println(track);
       delay(100);
       nextTrack(track);
-      // hier LED abschalten ?!
     }
     static void OnCardOnline(uint16_t code) {
       Serial.println(F("SD Karte online "));
@@ -97,7 +98,8 @@ static void nextTrack(uint16_t track) {
   _lastTrackFinished = track;
 
   if (knownCard == false)
-    // Wenn eine neue Karte angelernt wird soll das Ende eines Tracks nicht verarbeitet werden
+    // Wenn eine neue Karte angelernt wird soll das Ende eines Tracks nicht
+    // verarbeitet werden
     return;
 
   if (myCard.mode == 1) {
@@ -187,16 +189,16 @@ MFRC522::StatusCode status;
 #define buttonPause A0
 #define buttonUp A1
 #define buttonDown A2
-//#define buttonVolUp A3         //Neuer Knopf für Lautstärke hoch
-//#define buttonVolDown A4        //Neuer Knopf für Lautstärke runter
-
-#define LONG_PRESS 1000   //sollte hoch auf 3 oder 5000
+#define buttonVolUp A3         //Zusätzlicher Knopf für Lautstärke hoch
+#define buttonVolDown A4       //Zusätzlicher Knopf für Lautstärke runter
+#define busyPin 4
+#define LONG_PRESS 3000
 
 Button pauseButton(buttonPause);
 Button upButton(buttonUp);
 Button downButton(buttonDown);
-//Button VolUpButton(buttonVolUp);           //Neuer Knopf für Lautstärke hoch
-//Button VolDownButton(buttonVolDown);       //Neuer Knopf für Lautstärke runter
+Button VolUpButton(buttonVolUp);         //Knopf für Lautstärke hoch
+Button VolDownButton(buttonVolDown);     //Knopf für Lautstärke runter
 bool ignorePauseButton = false;
 bool ignoreUpButton = false;
 bool ignoreDownButton = false;
@@ -213,9 +215,6 @@ void setup() {
   strip.show(); // Initialize all pixels to 'off'
   strip.setBrightness(STARTBRIGHTNESS);
   rainbowCycle(2); //RainbowCycle von Adafruit abspielen
-  //  colorWipe(strip.Color(255, 0, 0), 30); // Gruen
-  //  colorWipe(strip.Color(0, 255, 0), 30); // Rot
-  //  colorWipe(strip.Color(0, 0, 255), 30); // Blau
   colorWipe(strip.Color(0, 0, 0), 0); // AUS
   strip.show();
   
@@ -226,17 +225,19 @@ void setup() {
   fill_solid(leds, NUM_LEDS, CRGB::Purple);
   FastLED.show();
 
-  Serial.begin(115200);
+  Serial.begin(115200); // Es gibt ein paar Debug Ausgaben über die serielle Schnittstelle
   randomSeed(analogRead(A0)); // Zufallsgenerator initialisieren
 
   Serial.println(F("TonUINO Version 2.0"));
   Serial.println(F("(c) Thorsten Voß"));
-  Serial.println(F("12 LED Ring Version"));
+  Serial.println(F("LED Ring + 5 Tasten MOD"));  
 
   // Knöpfe mit PullUp
   pinMode(buttonPause, INPUT_PULLUP);
   pinMode(buttonUp, INPUT_PULLUP);
   pinMode(buttonDown, INPUT_PULLUP);
+  pinMode(buttonVolUp, INPUT_PULLUP);         //Zusätzliche Buttons Vol Up
+  pinMode(buttonVolDown, INPUT_PULLUP);       //Zusätzliche Buttons Vol down
 
   // Busy Pin
   pinMode(busyPin, INPUT);
@@ -245,9 +246,10 @@ void setup() {
   mp3.begin();
   mp3.setVolume(12); // Startlautstärke
   volume = 12;
-  minVolume = 3; //  minimale Lautstärke
+  minVolume = 1; //  minimale Lautstärke
   maxVolume = 25; // maximale Lautatärke
-
+  Serial.println(F("Lautstärke:" ));
+  Serial.println(volume);
   
   // NFC Leser initialisieren
   SPI.begin();        // Init SPI bus
@@ -267,10 +269,14 @@ void setup() {
       EEPROM.write(i, 0);
     }
   }
+//  mp3.playMp3FolderTrack(998); //Startmelodie muss im mp3 Ordner liegen und so beginnen 998_blaxxxbla.mp3
 }
 
-void loop() {
+void loop(){
   do {
+    //Pride Animation. Super!
+     pride();
+     FastLED.show(); 
     // FastLED
     if (isPlaying()) {    // Prüfung, ob MP3 abgespielt wird, wenn ja, dann jeweilige LED-Animation abspielen
       FastLED.setBrightness(BRIGHTNESS2); // Helligkeit 2 während Animation beim Abspielen
@@ -279,7 +285,7 @@ void loop() {
         rainbowWithGlitter(); // FastLED's rainbowWithGlitter ausführen
       }
       if (myCard.mode == 2) { // Album Modus -> kompletten Ordner wiedergeben
-        rainbow();            // FastLED's  Regenbogen ausführen
+        rainbow();          // FastLED's  Regenbogen ausführen
       }
       if (myCard.mode == 3) { // Party Modus -> Ordner in zufälliger Reihenfolge
         confetti();           // FastLED's  confetti ausführen
@@ -293,19 +299,21 @@ void loop() {
       FastLED.show(); // send the 'leds' array out to the actual LED strip
       FastLED.delay(1000 / FRAMES_PER_SECOND); // insert a delay to keep the framerate modest
       EVERY_N_MILLISECONDS( 20 ) { gHue++; } // slowly cycle the "base color" through the rainbow
-    }
+    } 
     
     mp3.loop();
     // Buttons werden nun über JS_Button gehandelt, dadurch kann jede Taste doppelt belegt werden
     pauseButton.read();
     upButton.read();
     downButton.read();
+    VolUpButton.read();        //Zusätzliche Buttons 
+    VolDownButton.read();      //Zusätzliche Buttons
 
     if (pauseButton.wasReleased()) {
       if (ignorePauseButton == false)
         if (isPlaying()) {
           mp3.pause();
-          FastLED.clear (); // alle LEDs ausschalten
+          // FastLED.clear (); // alle LEDs ausschalten
           // fill_rainbow( leds, NUM_LEDS, 0, 5); // Rainbow Füllung
           FastLED.setBrightness(BRIGHTNESS1);
           fill_solid(leds, NUM_LEDS, CRGB::Purple);
@@ -330,55 +338,51 @@ void loop() {
       ignorePauseButton = true;
     }
 
-    if (upButton.pressedFor(LONG_PRESS)) {
-      if (volume < maxVolume) {
+  if (VolUpButton.wasReleased()) {
+    if (volume < maxVolume) {
       Serial.println(F("Volume Up"));
-      mp3.increaseVolume(); // Laustärke erhohen
+      mp3.increaseVolume();        // Laustärke erhohen
         volume = mp3.getVolume(); // aktuelle Lautstärke abfragen und in Variable schreiben
         Serial.println(volume);
       FastLED.setBrightness(BRIGHTNESS3);
-      fill_solid(leds, NUM_LEDS, CRGB::Red);
+      fill_solid(leds, NUM_LEDS, CRGB::Red);  // Red zeigt Grün an
       FastLED.show();
       FastLED.delay(500);
-      //FastLED.clear (); // alle LEDs ausschalten
+      FastLED.clear ();         // alle LEDs ausschalten (falls im Pause Modus
       FastLED.setBrightness(BRIGHTNESS1);
-      fill_solid(leds, NUM_LEDS, CRGB::Purple);
-      FastLED.show();
-      ignoreUpButton = true;
-      } else {
-      ignoreUpButton = true;
-      }
-    } else if (upButton.wasReleased()) {
-      if (!ignoreUpButton)
-        nextTrack(random(65536));
-      else {
-        ignoreUpButton = false;
-      }
-    }
+      //fill_solid(leds, NUM_LEDS, CRGB::Purple);
+      FastLED.show(); 
+        }
+     }
+    
+  if (upButton.wasReleased()) {      
+    nextTrack(random(65536));                               
+  }
   
-    if (downButton.pressedFor(LONG_PRESS)) {
-      if (volume > minVolume) {
-      Serial.println(F("Volume Down"));
-      mp3.decreaseVolume(); // Laustärke verringern
-        volume = mp3.getVolume(); // aktuelle Lautstärke abfragen und in Variable schreiben
-        Serial.println(volume);
-      FastLED.setBrightness(BRIGHTNESS3);
-      fill_solid(leds, NUM_LEDS, CRGB::Blue);
-      FastLED.show();
-      FastLED.delay(500);
-      // FastLED.clear (); // alle LEDs ausschalten
-      FastLED.setBrightness(BRIGHTNESS1);
-      fill_solid(leds, NUM_LEDS, CRGB::Purple);
-      FastLED.show();
-      ignoreDownButton = true;
-      }
-    } else if (downButton.wasReleased()) {
-      if (!ignoreDownButton)
-        previousTrack();
-      else
-        ignoreDownButton = false;
-    }
-    // Ende der Buttons
+  if (VolDownButton.wasReleased()) {
+    if (volume > minVolume) {
+    Serial.println(F("Volume Down"));
+    mp3.decreaseVolume();       // Laustärke verringern
+      volume = mp3.getVolume(); // aktuelle Lautstärke abfragen und in Variable schreiben
+      Serial.println(volume);
+    FastLED.setBrightness(BRIGHTNESS3);
+    fill_solid(leds, NUM_LEDS, CRGB::Green);    //Green zeigt Rot an
+    FastLED.show();
+    FastLED.delay(500);
+    // FastLED.clear ();        // alle LEDs ausschalten falls im Pause Modus
+    FastLED.setBrightness(BRIGHTNESS1);
+    //fill_solid(leds, NUM_LEDS, CRGB::Purple);
+    FastLED.show();
+    ignoreDownButton = true;
+      }                      
+  }
+   
+  if (downButton.wasReleased()) {
+    previousTrack();                         
+  }
+    
+// Ende der Buttons
+  
   } while (!mfrc522.PICC_IsNewCardPresent());
 
   // RFID Karte wurde aufgelegt
@@ -677,7 +681,7 @@ uint32_t Wheel(byte WheelPos) {
 }
 
 
-// LED-Part von FastLED-Library
+// LED-Part von FastLED-Library 
 void rainbow() // FastLED's built-in rainbow generator
 {
   fill_rainbow( leds, NUM_LEDS, gHue, 7); 
@@ -716,6 +720,48 @@ void blink_green_one()
   FastLED.show();
 }
 
+// PRIDE This function draws rainbows with an ever-changing,
+// widely-varying set of parameters.
+void pride() 
+{
+  static uint16_t sPseudotime = 0;
+  static uint16_t sLastMillis = 0;
+  static uint16_t sHue16 = 0;
+ 
+  uint8_t sat8 = beatsin88( 87, 220, 250);
+  uint8_t brightdepth = beatsin88( 341, 96, 224);
+  uint16_t brightnessthetainc16 = beatsin88( 203, (25 * 256), (40 * 256));
+  uint8_t msmultiplier = beatsin88(147, 23, 60);
+
+  uint16_t hue16 = sHue16;//gHue * 256;
+  uint16_t hueinc16 = beatsin88(113, 1, 3000);
+  
+  uint16_t ms = millis();
+  uint16_t deltams = ms - sLastMillis ;
+  sLastMillis  = ms;
+  sPseudotime += deltams * msmultiplier;
+  sHue16 += deltams * beatsin88( 400, 5,9);
+  uint16_t brightnesstheta16 = sPseudotime;
+  
+  for( uint16_t i = 0 ; i < NUM_LEDS; i++) {
+    hue16 += hueinc16;
+    uint8_t hue8 = hue16 / 256;
+
+    brightnesstheta16  += brightnessthetainc16;
+    uint16_t b16 = sin16( brightnesstheta16  ) + 32768;
+
+    uint16_t bri16 = (uint32_t)((uint32_t)b16 * (uint32_t)b16) / 65536;
+    uint8_t bri8 = (uint32_t)(((uint32_t)bri16) * brightdepth) / 65536;
+    bri8 += (255 - brightdepth);
+    
+    CRGB newcolor = CHSV( hue8, sat8, bri8);
+    
+    uint16_t pixelnumber = i;
+    pixelnumber = (NUM_LEDS-1) - pixelnumber;
+    
+    nblend( leds[pixelnumber], newcolor, 64);
+  }
+}
 
 // TonUINO Part
 void writeCard(nfcTagObject nfcTag) {
