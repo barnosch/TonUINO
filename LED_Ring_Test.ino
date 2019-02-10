@@ -1,6 +1,6 @@
 /* DEV Version Barnosch LED Ring Mod
 5 Tasten + LED Ring (12) MOD
-*/
+aktuelle DEV_10.2.2019 */
 #include <DFMiniMp3.h>
 #include <EEPROM.h>
 #include <JC_Button.h>
@@ -19,6 +19,7 @@ static const uint32_t cardCookie = 322417479;
   #define PIN 6
   #define NUM_LEDS 12
   Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
+
 
 // FastLED define und Brightness für Adafruit Neopixel
   FASTLED_USING_NAMESPACE
@@ -634,9 +635,12 @@ void loop() {
       if (ignorePauseButton == false)
         if (isPlaying()) {
           mp3.pause();
-          setstandbyTimer();
-            
-                       
+          // Im Pause Modus 
+          FastLED.setBrightness(BRIGHTNESS1);
+          //fill_solid(leds, NUM_LEDS, CRGB::Purple);
+          FastLED.show(); // Befehl zum LED Ring senden
+          setstandbyTimer();            
+        
         }
         else if (knownCard) {
           mp3.start();
@@ -662,58 +666,62 @@ void loop() {
       else {
         playShortCut(0);            
           
+               
+                  
+     
+                 
       }
       ignorePauseButton = true;
     }
 
     if (VolUpButton.wasReleased()) {
+                            
       Serial.println(F("Volume Up"));        
-      mp3.increaseVolume();                         
-						   
+      mp3.increaseVolume();
+    volume = mp3.getVolume(); // aktuelle Lautstärke abfragen und in Variable schreiben
+    Serial.println(volume);      //LEDs grün leuchten lassen         
+    FastLED.setBrightness(BRIGHTNESS3);
+      fill_solid(leds, NUM_LEDS, CRGB::Red);  // Red zeigt Grün an
+      FastLED.show();
+      FastLED.delay(500);
+      FastLED.clear ();         // alle LEDs ausschalten (falls im Pause Modus
+      FastLED.setBrightness(BRIGHTNESS1);
+      FastLED.show();                                
     }
-           
-					   
-		 
-	   
-			
-						
-	   
-							
+         
+                              
     if (upButton.wasReleased()) {      
-      nextTrack(random(65536));                       
-											  
-					   
-		 
-			  
-						   
-		 
-							 
+      nextTrack(random(65536));                                 
     }
 
     if (VolDownButton.wasReleased()) {
+                            
       Serial.println(F("Volume Down"));
-      mp3.decreaseVolume();                   
-							 
+      mp3.decreaseVolume();
+      volume = mp3.getVolume(); // aktuelle Lautstärke abfragen und in Variable schreiben
+    Serial.println(volume);
+    FastLED.setBrightness(BRIGHTNESS3);
+    fill_solid(leds, NUM_LEDS, CRGB::Green);    //Green zeigt Rot an
+    FastLED.show();
+    FastLED.delay(500);
+    FastLED.clear ();        // alle LEDs ausschalten falls im Pause Modus
+    FastLED.setBrightness(BRIGHTNESS1);
+    FastLED.show();        
     } 
+           
+                       
+   
   
-						   
-		 
-	   
-			
-						
-	   
-							  
+           
+  
+                       
+
+                 
+
     if (downButton.wasReleased()) {
-      previousTrack();         
-											  
-						   
-		 
-			  
-							 
-		 
-	   
-							   
+      previousTrack();                   
     }
+                  
 // Ende der Buttons
                  
   } while (!mfrc522.PICC_IsNewCardPresent());
@@ -728,6 +736,44 @@ void loop() {
     randomSeed(millis() + random(1000));
     if (myCard.cookie == cardCookie && myFolder->folder != 0 && myFolder->mode != 0) {
       playFolder();
+                             
+     
+                         
+               
+                                      
+             
+                             
+     
+                             
+               
+                                              
+                            
+                             
+     
+                              
+               
+             
+                                   
+                    
+                             
+     
+                                     
+               
+                                       
+                        
+                          
+                             
+     
+   
+
+                 
+      
+            
+          
+   
+   
+             
+              
     }
 
     // Neue Karte konfigurieren
@@ -880,6 +926,9 @@ uint8_t voiceMenu(int numberOfOptions, int startMessage, int messageOffset,
       mp3.playMp3FolderTrack(messageOffset + returnValue);
       waitForTrackToFinish();
       /*if (preview) {
+              
+                              
+     
         if (previewFromFolder == 0)
           mp3.playFolderTrack(returnValue, 1);
         else
@@ -916,6 +965,9 @@ uint8_t voiceMenu(int numberOfOptions, int startMessage, int messageOffset,
       mp3.playMp3FolderTrack(messageOffset + returnValue);
       waitForTrackToFinish();
       /*if (preview) {
+                
+                        
+     
         if (previewFromFolder == 0)
           mp3.playFolderTrack(returnValue, 1);
         else
@@ -931,6 +983,8 @@ uint8_t voiceMenu(int numberOfOptions, int startMessage, int messageOffset,
                   
         if (preview) {
           waitForTrackToFinish();
+      
+                 
           if (previewFromFolder == 0) {
             mp3.playFolderTrack(returnValue, 1);
           }
@@ -968,6 +1022,9 @@ void resetCard() {
 }
 
 void setupFolder(folderSettings * theFolder) {
+                 
+
+                  
   // Ordner abfragen
   theFolder->folder = voiceMenu(99, 301, 0, true);
 
@@ -1007,7 +1064,7 @@ void setupCard() {
 }
 
 bool readCard(nfcTagObject * nfcTag) {
-	
+  
   // Show some details of the PICC (that is: the tag/card)
   Serial.print(F("Card UID:"));
   dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
@@ -1059,6 +1116,7 @@ bool readCard(nfcTagObject * nfcTag) {
     Serial.println(F(" ..."));
     status = (MFRC522::StatusCode)mfrc522.MIFARE_Read(blockAddr, buffer, &size);
     if (status != MFRC522::STATUS_OK) {
+
       Serial.print(F("MIFARE_Read() failed: "));
       Serial.println(mfrc522.GetStatusCodeName(status));
       return false;
@@ -1128,6 +1186,7 @@ bool readCard(nfcTagObject * nfcTag) {
    return true;
 }
            
+        
 // LED-Part von Adafruit-Library
 void colorWipe(uint32_t c, uint8_t wait) { // Adafruit´s - Fill the dots one after the other with a color
   for (uint16_t i = 0; i < strip.numPixels(); i++) {
@@ -1163,6 +1222,46 @@ uint32_t Wheel(byte WheelPos) {
 
 
 // LED-Part von FastLED-Library 
+                    
+ 
+                   
+                        
+   
+ 
+                                      
+ 
+                   
+                 
+                           
+ 
+                                       
+ 
+                   
+                       
+                   
+ 
+            
+ 
+                   
+                      
+         
+           
+       
+                      
+         
+ 
+  
+
+                              
+                  
+       
+ 
+                  
+                  
+               
+ 
+                      
+                         
 // PRIDE This function draws rainbows with an ever-changing,
 // widely-varying set of parameters.
 void pride() 
@@ -1292,6 +1391,7 @@ void writeCard(nfcTagObject nfcTag) {
     mp3.playMp3FolderTrack(400);
   Serial.println();
   delay(100);
+                        
 }
                              
 
