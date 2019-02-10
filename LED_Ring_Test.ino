@@ -7,7 +7,10 @@
 #include <MFRC522.h>
 #include <SPI.h>
 #include <SoftwareSerial.h>
-#include <avr/sleep.h>                
+#include <avr/sleep.h>
+
+static const uint32_t cardCookie = 322417479;
+
 #include <FastLED.h> // FastLED-Library einbinden
 #include <Adafruit_NeoPixel.h> Adafruit Neopixel-Library einbinden
   #ifdef __AVR__
@@ -141,7 +144,7 @@ void writeSettingsToFlash() {
 
 void resetSettings() {
   Serial.println(F("=== resetSettings()"));
-  mySettings.cookie = 322417479;
+  mySettings.cookie = cardCookie;
   mySettings.version = 1;
   mySettings.maxVolume = 25;
   mySettings.minVolume = 5;
@@ -158,13 +161,14 @@ void resetSettings() {
 }
 
 void migradeSettings(int oldVersion) {
+
 }
 
 void loadSettingsFromFlash() {
   Serial.println(F("=== loadSettingsFromFlash()"));
   int address = sizeof(myFolder->folder) * 100;
   EEPROM.get(address, mySettings);
-  if (mySettings.cookie != 322417479)
+  if (mySettings.cookie != cardCookie)
     resetSettings();
   migradeSettings(mySettings.version);
 
@@ -371,6 +375,7 @@ void checkStandbyAtMillis() {
   }
 }
 
+
 bool isPlaying() {
   return !digitalRead(busyPin);
 }
@@ -427,6 +432,8 @@ void setup() {
 
   // DFPlayer Mini initialisieren
   mp3.begin();
+  // Eine Sekunde warten bis der DFPlayer Mini initialisiert ist (orig ist 2sek)
+  delay(1000);
   volume = mySettings.initVolume;
   mp3.setVolume(volume);
   mp3.setEq(mySettings.eq - 1);
@@ -501,7 +508,7 @@ void previousButton() {
 
 void playFolder() {
   disablestandbyTimer();
-  randomSeed(millis + random(1000));
+  randomSeed(millis() + random(1000));
   knownCard = true;
   _lastTrackFinished = 0;
   numTracksInFolder = mp3.getFolderTrackCount(myFolder->folder);
@@ -542,7 +549,10 @@ void playFolder() {
   if (myFolder->mode == 5) {
     Serial.println(F("Hörbuch Modus -> kompletten Ordner spielen und "
                      "Fortschritt merken"));
-    currentTrack = max(1, EEPROM.read(myFolder->folder));
+    currentTrack = EEPROM.read(myFolder->folder);
+    if (currentTrack == 0 || currentTrack > numTracksInFolder) {
+      currentTrack = 1;
+    }
     mp3.playFolderTrack(myFolder->folder, currentTrack);
   }
   // Spezialmodus Von-Bin: Hörspiel: eine zufällige Datei aus dem Ordner
@@ -659,19 +669,50 @@ void loop() {
     if (VolUpButton.wasReleased()) {
       Serial.println(F("Volume Up"));        
       mp3.increaseVolume();                         
+						   
     }
            
+					   
+		 
+	   
+			
+						
+	   
+							
     if (upButton.wasReleased()) {      
       nextTrack(random(65536));                       
+											  
+					   
+		 
+			  
+						   
+		 
+							 
     }
 
     if (VolDownButton.wasReleased()) {
       Serial.println(F("Volume Down"));
       mp3.decreaseVolume();                   
+							 
     } 
   
+						   
+		 
+	   
+			
+						
+	   
+							  
     if (downButton.wasReleased()) {
       previousTrack();         
+											  
+						   
+		 
+			  
+							 
+		 
+	   
+							   
     }
 // Ende der Buttons
                  
@@ -684,9 +725,9 @@ void loop() {
 
   if (readCard(&myCard) == true) {
     // make random a little bit more "random"
-    randomSeed(millis());
-    if (myCard.cookie == 322417479 && myFolder->folder != 0 && myFolder->mode != 0) {
-      playFolder();                 
+    randomSeed(millis() + random(1000));
+    if (myCard.cookie == cardCookie && myFolder->folder != 0 && myFolder->mode != 0) {
+      playFolder();
     }
 
     // Neue Karte konfigurieren
@@ -728,7 +769,7 @@ void adminMenu() {
   else if (subMenu == 5) {
     // EQ
     mySettings.eq = voiceMenu(6, 920, 920, false, false, mySettings.eq);
-                 
+    mp3.setEq(mySettings.eq - 1);             
   }
   else if (subMenu == 6) {
     // create master card
@@ -751,7 +792,7 @@ void adminMenu() {
     // Create Cards for Folder
     // Ordner abfragen
     nfcTagObject tempCard;
-    tempCard.cookie = 322417479;
+    tempCard.cookie = cardCookie;
     tempCard.version = 1;
     tempCard.nfcFolderSettings.mode = 4;
     tempCard.nfcFolderSettings.folder = voiceMenu(99, 301, 0, true);
@@ -966,7 +1007,7 @@ void setupCard() {
 }
 
 bool readCard(nfcTagObject * nfcTag) {
-  //bool returnValue = true;
+	
   // Show some details of the PICC (that is: the tag/card)
   Serial.print(F("Card UID:"));
   dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
@@ -996,7 +1037,7 @@ bool readCard(nfcTagObject * nfcTag) {
     status = mfrc522.PCD_NTAG216_AUTH(key.keyByte, pACK);
   }
 
-    if (status != MFRC522::STATUS_OK) {
+  if (status != MFRC522::STATUS_OK) {
             
     Serial.print(F("PCD_Authenticate() failed: "));
     Serial.println(mfrc522.GetStatusCodeName(status));
@@ -1181,7 +1222,7 @@ void writeCard(nfcTagObject nfcTag) {
 
   mifareType = mfrc522.PICC_GetType(mfrc522.uid.sak);
 
-// Authenticate using key B
+  // Authenticate using key B
   //authentificate with the card and set card specific parameters
   if ((mifareType == MFRC522::PICC_TYPE_MIFARE_MINI ) ||
       (mifareType == MFRC522::PICC_TYPE_MIFARE_1K ) ||
@@ -1253,6 +1294,8 @@ void writeCard(nfcTagObject nfcTag) {
   delay(100);
 }
                              
+
+
 /**
    Helper routine to dump a byte array as hex values to Serial.
 */
