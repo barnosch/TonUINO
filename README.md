@@ -5,6 +5,13 @@
 - Pause: Led ist aus
 - Play : Led fadet ein und aus
 
+# LED Ring Version der aktuelle DEV Version
+( LED_Ring_Test.ino )
+<FastLED.h> und <Adafruit_NeoPixel.h> Bibliotheken werden benötigt
+- 5 Tasten 
+- 2 Zusätzliche Taster für die Lautstärke (A3 und A4)
+- 12 LED WS812 NeoPixel Ring mit einfacher (wechselnder) Animation, während des Abspielens
+
 # TonUINO
 Die DIY Musikbox (nicht nur) für Kinder
 
