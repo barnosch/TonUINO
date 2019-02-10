@@ -158,7 +158,6 @@ void resetSettings() {
 }
 
 void migradeSettings(int oldVersion) {
-
 }
 
 void loadSettingsFromFlash() {
@@ -430,6 +429,7 @@ void setup() {
   mp3.begin();
   volume = mySettings.initVolume;
   mp3.setVolume(volume);
+  mp3.setEq(mySettings.eq - 1);
   // Fix für das Problem mit dem Timeout (ist jetzt in Upstream daher nicht mehr nötig!)
   //mySoftwareSerial.setTimeout(10000);
                     
@@ -458,8 +458,9 @@ void setup() {
       EEPROM.update(i, 0);
     }
   }
+  
   // Start Shortcut "at Startup" - e.g. Welcome Sound
-  playShortCut(3);
+  playShortCut(3);              
 }
 
 void readButtons() {
@@ -655,57 +656,24 @@ void loop() {
       ignorePauseButton = true;
     }
 
-    if (upButton.pressedFor(LONG_PRESS)) {
-      if (isPlaying()) {
-        if (!mySettings.invertVolumeButtons) {
-          volumeUpButton();
-                             
-        }
-        else {
-          nextButton();
-        }
-      }
-      else {
-        playShortCut(1);
-      }
-      ignoreUpButton = true;
-    } else if (upButton.wasReleased()) {
-      if (!ignoreUpButton)
-        if (!mySettings.invertVolumeButtons) {
-          nextButton();
-        }
-        else {
-          volumeUpButton();
-        }
-      ignoreUpButton = false;
+    if (VolUpButton.wasReleased()) {
+      Serial.println(F("Volume Up"));        
+      mp3.increaseVolume();                         
+    }
+           
+    if (upButton.wasReleased()) {      
+      nextTrack(random(65536));                       
     }
 
-    if (downButton.pressedFor(LONG_PRESS)) {
-      if (isPlaying()) {
-        if (!mySettings.invertVolumeButtons) {
-          volumeDownButton();
-        }
-        else {
-          previousButton();
-        }
-      }
-      else {
-        playShortCut(2);
-      }
-      ignoreDownButton = true;
-            
-    } else if (downButton.wasReleased()) {
-      if (!ignoreDownButton) {
-        if (!mySettings.invertVolumeButtons) {
-          previousButton();
-        }
-        else {
-          volumeDownButton();
-        }
-      }
-      ignoreDownButton = false;
+    if (VolDownButton.wasReleased()) {
+      Serial.println(F("Volume Down"));
+      mp3.decreaseVolume();                   
+    } 
+  
+    if (downButton.wasReleased()) {
+      previousTrack();         
     }
-    // Ende der Buttons
+// Ende der Buttons
                  
   } while (!mfrc522.PICC_IsNewCardPresent());
 
@@ -760,6 +728,7 @@ void adminMenu() {
   else if (subMenu == 5) {
     // EQ
     mySettings.eq = voiceMenu(6, 920, 920, false, false, mySettings.eq);
+                 
   }
   else if (subMenu == 6) {
     // create master card
@@ -997,7 +966,7 @@ void setupCard() {
 }
 
 bool readCard(nfcTagObject * nfcTag) {
-  bool returnValue = true;
+  //bool returnValue = true;
   // Show some details of the PICC (that is: the tag/card)
   Serial.print(F("Card UID:"));
   dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
@@ -1010,38 +979,96 @@ bool readCard(nfcTagObject * nfcTag) {
   byte size = sizeof(buffer);
 
   // Authenticate using key A
-  Serial.println(F("Authenticating using key A..."));
-  status = (MFRC522::StatusCode)mfrc522.PCD_Authenticate(
-             MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(mfrc522.uid));
-  if (status != MFRC522::STATUS_OK) {
-    returnValue = false;
+  if ((piccType == MFRC522::PICC_TYPE_MIFARE_MINI ) ||
+      (piccType == MFRC522::PICC_TYPE_MIFARE_1K ) ||
+      (piccType == MFRC522::PICC_TYPE_MIFARE_4K ) )
+  {
+    Serial.println(F("Authenticating Classic using key A..."));
+    status = mfrc522.PCD_Authenticate(
+               MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(mfrc522.uid));
+  }
+  else if (piccType == MFRC522::PICC_TYPE_MIFARE_UL )
+  {
+    byte pACK[] = {0, 0}; //16 bit PassWord ACK returned by the NFCtag
+
+    // Authenticate using key A
+    Serial.println(F("Authenticating MIFARE UL..."));
+    status = mfrc522.PCD_NTAG216_AUTH(key.keyByte, pACK);
+  }
+
+    if (status != MFRC522::STATUS_OK) {
+            
     Serial.print(F("PCD_Authenticate() failed: "));
     Serial.println(mfrc522.GetStatusCodeName(status));
-    return;
+    return false;
   }
 
   // Show the whole sector as it currently is
-  Serial.println(F("Current data in sector:"));
-  mfrc522.PICC_DumpMifareClassicSectorToSerial(&(mfrc522.uid), &key, sector);
-  Serial.println();
+  //Serial.println(F("Current data in sector:"));
+  //mfrc522.PICC_DumpMifareClassicSectorToSerial(&(mfrc522.uid), &key, sector);
+  //Serial.println();
 
-  // Read data from the block
-  Serial.print(F("Reading data from block "));
-  Serial.print(blockAddr);
-  Serial.println(F(" ..."));
-  status = (MFRC522::StatusCode)mfrc522.MIFARE_Read(blockAddr, buffer, &size);
-  if (status != MFRC522::STATUS_OK) {
-    returnValue = false;
-    Serial.print(F("MIFARE_Read() failed: "));
-    Serial.println(mfrc522.GetStatusCodeName(status));
+// Read data from the block
+  if ((piccType == MFRC522::PICC_TYPE_MIFARE_MINI ) ||
+      (piccType == MFRC522::PICC_TYPE_MIFARE_1K ) ||
+      (piccType == MFRC522::PICC_TYPE_MIFARE_4K ) )
+  {
+    Serial.print(F("Reading data from block "));
+    Serial.print(blockAddr);
+    Serial.println(F(" ..."));
+    status = (MFRC522::StatusCode)mfrc522.MIFARE_Read(blockAddr, buffer, &size);
+    if (status != MFRC522::STATUS_OK) {
+      Serial.print(F("MIFARE_Read() failed: "));
+      Serial.println(mfrc522.GetStatusCodeName(status));
+      return false;
+    }
   }
-  Serial.print(F("Data in block "));
-  Serial.print(blockAddr);
+  else if (piccType == MFRC522::PICC_TYPE_MIFARE_UL )
+  {
+    byte buffer2[18];
+    byte size2 = sizeof(buffer2);
+
+    status = (MFRC522::StatusCode)mfrc522.MIFARE_Read(8, buffer2, &size2);
+    if (status != MFRC522::STATUS_OK) {
+      Serial.print(F("MIFARE_Read_1() failed: "));
+      Serial.println(mfrc522.GetStatusCodeName(status));
+      return false;
+    }
+    memcpy(buffer, buffer2, 4);
+
+    status = (MFRC522::StatusCode)mfrc522.MIFARE_Read(9, buffer2, &size2);
+    if (status != MFRC522::STATUS_OK) {
+      Serial.print(F("MIFARE_Read_2() failed: "));
+      Serial.println(mfrc522.GetStatusCodeName(status));
+      return false;
+    }
+    memcpy(buffer + 4, buffer2, 4);
+
+    status = (MFRC522::StatusCode)mfrc522.MIFARE_Read(10, buffer2, &size2);
+    if (status != MFRC522::STATUS_OK) {
+      Serial.print(F("MIFARE_Read_3() failed: "));
+      Serial.println(mfrc522.GetStatusCodeName(status));
+      return false;
+    }
+    memcpy(buffer + 8, buffer2, 4);
+
+    status = (MFRC522::StatusCode)mfrc522.MIFARE_Read(11, buffer2, &size2);
+    if (status != MFRC522::STATUS_OK) {
+      Serial.print(F("MIFARE_Read_4() failed: "));
+      Serial.println(mfrc522.GetStatusCodeName(status));
+      return false;
+    }
+    memcpy(buffer + 12, buffer2, 4);
+  }
+
+  Serial.print(F("Data on Card "));
+              
   Serial.println(F(":"));
   dump_byte_array(buffer, 16);
   Serial.println();
   Serial.println();
 
+            
   uint32_t tempCookie;
   tempCookie = (uint32_t)buffer[0] << 24;
   tempCookie += (uint32_t)buffer[1] << 16;
@@ -1056,7 +1083,8 @@ bool readCard(nfcTagObject * nfcTag) {
   nfcTag->nfcFolderSettings.special2 = buffer[8];
 
   myFolder = &nfcTag->nfcFolderSettings;
-  return returnValue;
+        
+   return true;
 }
            
 // LED-Part von Adafruit-Library
@@ -1153,10 +1181,25 @@ void writeCard(nfcTagObject nfcTag) {
 
   mifareType = mfrc522.PICC_GetType(mfrc522.uid.sak);
 
-  // Authenticate using key B
-  Serial.println(F("Authenticating again using key B..."));
-  status = (MFRC522::StatusCode)mfrc522.PCD_Authenticate(
-             MFRC522::PICC_CMD_MF_AUTH_KEY_B, trailerBlock, &key, &(mfrc522.uid));
+// Authenticate using key B
+  //authentificate with the card and set card specific parameters
+  if ((mifareType == MFRC522::PICC_TYPE_MIFARE_MINI ) ||
+      (mifareType == MFRC522::PICC_TYPE_MIFARE_1K ) ||
+      (mifareType == MFRC522::PICC_TYPE_MIFARE_4K ) )
+  {
+    Serial.println(F("Authenticating again using key B..."));
+    status = mfrc522.PCD_Authenticate(
+               MFRC522::PICC_CMD_MF_AUTH_KEY_B, trailerBlock, &key, &(mfrc522.uid));
+  }
+  else if (mifareType == MFRC522::PICC_TYPE_MIFARE_UL )
+  {
+    byte pACK[] = {0, 0}; //16 bit PassWord ACK returned by the NFCtag
+
+    // Authenticate using key A
+    Serial.println(F("Authenticating UL..."));
+    status = mfrc522.PCD_NTAG216_AUTH(key.keyByte, pACK);
+  }
+
   if (status != MFRC522::STATUS_OK) {
     Serial.print(F("PCD_Authenticate() failed: "));
     Serial.println(mfrc522.GetStatusCodeName(status));
@@ -1170,7 +1213,35 @@ void writeCard(nfcTagObject nfcTag) {
   Serial.println(F(" ..."));
   dump_byte_array(buffer, 16);
   Serial.println();
-  status = (MFRC522::StatusCode)mfrc522.MIFARE_Write(blockAddr, buffer, 16);
+
+  if ((mifareType == MFRC522::PICC_TYPE_MIFARE_MINI ) ||
+      (mifareType == MFRC522::PICC_TYPE_MIFARE_1K ) ||
+      (mifareType == MFRC522::PICC_TYPE_MIFARE_4K ) )
+  {
+    status = (MFRC522::StatusCode)mfrc522.MIFARE_Write(blockAddr, buffer, 16);
+  }
+  else if (mifareType == MFRC522::PICC_TYPE_MIFARE_UL )
+  {
+    byte buffer2[16];
+    byte size2 = sizeof(buffer2);
+
+    memset(buffer2, 0, size2);
+    memcpy(buffer2, buffer, 4);
+    status = (MFRC522::StatusCode)mfrc522.MIFARE_Write(8, buffer2, 16);
+
+    memset(buffer2, 0, size2);
+    memcpy(buffer2, buffer + 4, 4);
+    status = (MFRC522::StatusCode)mfrc522.MIFARE_Write(9, buffer2, 16);
+
+    memset(buffer2, 0, size2);
+    memcpy(buffer2, buffer + 8, 4);
+    status = (MFRC522::StatusCode)mfrc522.MIFARE_Write(10, buffer2, 16);
+
+    memset(buffer2, 0, size2);
+    memcpy(buffer2, buffer + 12, 4);
+    status = (MFRC522::StatusCode)mfrc522.MIFARE_Write(11, buffer2, 16);
+  }
+
   if (status != MFRC522::STATUS_OK) {
     Serial.print(F("MIFARE_Write() failed: "));
     Serial.println(mfrc522.GetStatusCodeName(status));
@@ -1179,9 +1250,9 @@ void writeCard(nfcTagObject nfcTag) {
   else
     mp3.playMp3FolderTrack(400);
   Serial.println();
-  delay(100);                                         
+  delay(100);
 }
-
+                             
 /**
    Helper routine to dump a byte array as hex values to Serial.
 */
