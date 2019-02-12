@@ -32,8 +32,9 @@ static const uint32_t cardCookie = 322417479;
   #define BRIGHTNESS3          50 // Helligkeit für FastLED bei Bestätigung z.B. Blinken o.ä.
   #define BRIGHTNESS4          10 
   #define STARTBRIGHTNESS      50 // Helligkeit für ADAFRUIT-Library
-  #define FRAMES_PER_SECOND  120 
-  uint8_t gHue = 0;               // rotating "base color" used by many of the patterns                              
+  #define FRAMES_PER_SECOND   120 
+  uint8_t gHue = 0;               // rotating "base color" used by many of the patterns         
+                       
 
 // DFPlayer Mini
 SoftwareSerial mySoftwareSerial(2, 3); // RX, TX
@@ -633,19 +634,8 @@ void loop() {
         if (isPlaying()) {
           mp3.pause();
           // Im Pause Modus LEDs ausschalten
-          //FastLED.clear ();
-          FastLED.setBrightness(BRIGHTNESS4);
-          int i;
-          for(i=0; i<99; i++) {
-               for(int dot = 0; dot < NUM_LEDS; dot++) { 
-                  leds[dot] = CRGB::Blue;
-                  FastLED.show();
-                  // clear this led for the next time around the loop
-                  leds[dot] = CRGB::Black;
-                  delay(255);
-              }
-          }
-          //FastLED.show();                   
+          FastLED.clear ();
+          FastLED.show();       
           setstandbyTimer();            
         }
         else if (knownCard) {
