@@ -20,20 +20,20 @@ static const uint32_t cardCookie = 322417479;
   #define NUM_LEDS 12
   Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 
-
 // FastLED define und Brightness für Adafruit Neopixel
   FASTLED_USING_NAMESPACE
   #define DATA_PIN    6
   #define LED_TYPE    WS2812
-  #define COLOR_ORDER RGB
+  #define COLOR_ORDER GRB         //RGB
   #define NUM_LEDS    12
   CRGB leds[NUM_LEDS];
   #define BRIGHTNESS1          3  // Helligkeit für FastLED Low (wenn z.B. KEINE Musik gespielt wird)
   #define BRIGHTNESS2          30 // Helligkeit für FastLED High (wenn z.B Musik gespielt wird)
   #define BRIGHTNESS3          50 // Helligkeit für FastLED bei Bestätigung z.B. Blinken o.ä.
+  #define BRIGHTNESS4          10 
   #define STARTBRIGHTNESS      50 // Helligkeit für ADAFRUIT-Library
   #define FRAMES_PER_SECOND  120 
-  //uint8_t gHue = 0;             // rotating "base color" used by many of the patterns                                 
+  uint8_t gHue = 0;               // rotating "base color" used by many of the patterns                              
 
 // DFPlayer Mini
 SoftwareSerial mySoftwareSerial(2, 3); // RX, TX
@@ -328,7 +328,6 @@ MFRC522::StatusCode status;
 #define buttonVolDown A4       //Zusätzlicher Knopf für Lautstärke runter
 #define busyPin 4
 #define shutdownPin 7
-
 #define LONG_PRESS 3000       //Original bei 1000
 
 Button pauseButton(buttonPause);
@@ -339,7 +338,6 @@ Button VolDownButton(buttonVolDown);     //Knopf für Lautstärke runter
 bool ignorePauseButton = false;
 bool ignoreUpButton = false;
 bool ignoreDownButton = false;
-
 
 /// Funktionen für den Standby Timer (z.B. über Pololu-Switch oder Mosfet)
 
@@ -396,17 +394,16 @@ void waitForTrackToFinish() {
 void setup() {
   // Adafruit Animation zum Start
   strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
+  strip.show();                       // Initialize all pixels to 'off'
   strip.setBrightness(STARTBRIGHTNESS);
-  rainbowCycle(5); //RainbowCycle von Adafruit abspielen
-  rainbowCycle(5); //das zweite mal, weils so schön ist
+  rainbowCycle(5);                    //RainbowCycle von Adafruit abspielen
+  rainbowCycle(5);                    //das zweite mal, weils so schön ist
   colorWipe(strip.Color(0, 0, 0), 0); // AUS
   strip.show();
   
   // FastLED
   FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip); // tell FastLED about the LED strip configuration
   FastLED.setBrightness(BRIGHTNESS1);
-  //fill_solid(leds, NUM_LEDS, CRGB::Purple);
   FastLED.show();
   
   Serial.begin(115200); // Es gibt ein paar Debug Ausgaben über die serielle Schnittstelle
@@ -609,8 +606,8 @@ void loop() {
     checkStandbyAtMillis();
  
   //FastLED Pride Animation. Abspielen sobald etwas läuft
-    if (isPlaying()) {    // Prüfen ob gerade etwas läuft un dann die Animation abspielen
-      FastLED.setBrightness(BRIGHTNESS2); // Helligkeit 2
+    if (isPlaying()) {    // Prüfen ob gerade etwas läuft und dann die Animation abspielen
+      FastLED.setBrightness(BRIGHTNESS2);
       pride();
       FastLED.show();
       }     
@@ -635,12 +632,21 @@ void loop() {
       if (ignorePauseButton == false)
         if (isPlaying()) {
           mp3.pause();
-          // Im Pause Modus 
-          FastLED.setBrightness(BRIGHTNESS1);
-          //fill_solid(leds, NUM_LEDS, CRGB::Purple);
-          FastLED.show(); // Befehl zum LED Ring senden
+          // Im Pause Modus LEDs ausschalten
+          //FastLED.clear ();
+          FastLED.setBrightness(BRIGHTNESS4);
+          int i;
+          for(i=0; i<99; i++) {
+               for(int dot = 0; dot < NUM_LEDS; dot++) { 
+                  leds[dot] = CRGB::Blue;
+                  FastLED.show();
+                  // clear this led for the next time around the loop
+                  leds[dot] = CRGB::Black;
+                  delay(255);
+              }
+          }
+          //FastLED.show();                   
           setstandbyTimer();            
-        
         }
         else if (knownCard) {
           mp3.start();
@@ -664,23 +670,17 @@ void loop() {
         mp3.playAdvertisement(advertTrack);
       }
       else {
-        playShortCut(0);            
-          
-               
-                  
-     
-                 
+        playShortCut(0);                  
       }
       ignorePauseButton = true;
     }
 
-    if (VolUpButton.wasReleased()) {
-                            
+    if (VolUpButton.wasReleased()) {                     
       Serial.println(F("Volume Up"));        
       mp3.increaseVolume();
-    volume = mp3.getVolume(); // aktuelle Lautstärke abfragen und in Variable schreiben
-    Serial.println(volume);      //LEDs grün leuchten lassen         
-    FastLED.setBrightness(BRIGHTNESS3);
+        volume = mp3.getVolume(); // aktuelle Lautstärke abfragen und in Variable schreiben
+        Serial.println(volume);      //LEDs grün leuchten lassen         
+      FastLED.setBrightness(BRIGHTNESS3);
       fill_solid(leds, NUM_LEDS, CRGB::Red);  // Red zeigt Grün an
       FastLED.show();
       FastLED.delay(500);
@@ -694,30 +694,19 @@ void loop() {
       nextTrack(random(65536));                                 
     }
 
-    if (VolDownButton.wasReleased()) {
-                            
+    if (VolDownButton.wasReleased()) {                
       Serial.println(F("Volume Down"));
       mp3.decreaseVolume();
-      volume = mp3.getVolume(); // aktuelle Lautstärke abfragen und in Variable schreiben
-    Serial.println(volume);
-    FastLED.setBrightness(BRIGHTNESS3);
-    fill_solid(leds, NUM_LEDS, CRGB::Green);    //Green zeigt Rot an
-    FastLED.show();
-    FastLED.delay(500);
-    FastLED.clear ();        // alle LEDs ausschalten falls im Pause Modus
-    FastLED.setBrightness(BRIGHTNESS1);
-    FastLED.show();        
-    } 
-           
-                       
-   
-  
-           
-  
-                       
-
-                 
-
+        volume = mp3.getVolume(); // aktuelle Lautstärke abfragen und in Variable schreiben
+        Serial.println(volume);
+      FastLED.setBrightness(BRIGHTNESS3);
+      fill_solid(leds, NUM_LEDS, CRGB::Green);    //Green zeigt Rot an
+      FastLED.show();
+      FastLED.delay(500);
+      FastLED.clear ();        // alle LEDs ausschalten falls im Pause Modus
+      FastLED.setBrightness(BRIGHTNESS1);
+      FastLED.show();        
+      } 
     if (downButton.wasReleased()) {
       previousTrack();                   
     }
@@ -736,44 +725,6 @@ void loop() {
     randomSeed(millis() + random(1000));
     if (myCard.cookie == cardCookie && myFolder->folder != 0 && myFolder->mode != 0) {
       playFolder();
-                             
-     
-                         
-               
-                                      
-             
-                             
-     
-                             
-               
-                                              
-                            
-                             
-     
-                              
-               
-             
-                                   
-                    
-                             
-     
-                                     
-               
-                                       
-                        
-                          
-                             
-     
-   
-
-                 
-      
-            
-          
-   
-   
-             
-              
     }
 
     // Neue Karte konfigurieren
@@ -926,9 +877,6 @@ uint8_t voiceMenu(int numberOfOptions, int startMessage, int messageOffset,
       mp3.playMp3FolderTrack(messageOffset + returnValue);
       waitForTrackToFinish();
       /*if (preview) {
-              
-                              
-     
         if (previewFromFolder == 0)
           mp3.playFolderTrack(returnValue, 1);
         else
@@ -965,9 +913,6 @@ uint8_t voiceMenu(int numberOfOptions, int startMessage, int messageOffset,
       mp3.playMp3FolderTrack(messageOffset + returnValue);
       waitForTrackToFinish();
       /*if (preview) {
-                
-                        
-     
         if (previewFromFolder == 0)
           mp3.playFolderTrack(returnValue, 1);
         else
@@ -1022,9 +967,7 @@ void resetCard() {
 }
 
 void setupFolder(folderSettings * theFolder) {
-                 
-
-                  
+            
   // Ordner abfragen
   theFolder->folder = voiceMenu(99, 301, 0, true);
 
@@ -1166,7 +1109,6 @@ bool readCard(nfcTagObject * nfcTag) {
   dump_byte_array(buffer, 16);
   Serial.println();
   Serial.println();
-
             
   uint32_t tempCookie;
   tempCookie = (uint32_t)buffer[0] << 24;
@@ -1184,8 +1126,7 @@ bool readCard(nfcTagObject * nfcTag) {
   myFolder = &nfcTag->nfcFolderSettings;
         
    return true;
-}
-           
+}         
         
 // LED-Part von Adafruit-Library
 void colorWipe(uint32_t c, uint8_t wait) { // Adafruit´s - Fill the dots one after the other with a color
@@ -1220,48 +1161,7 @@ uint32_t Wheel(byte WheelPos) {
   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
 
-
-// LED-Part von FastLED-Library 
-                    
- 
-                   
-                        
-   
- 
-                                      
- 
-                   
-                 
-                           
- 
-                                       
- 
-                   
-                       
-                   
- 
-            
- 
-                   
-                      
-         
-           
-       
-                      
-         
- 
-  
-
-                              
-                  
-       
- 
-                  
-                  
-               
- 
-                      
-                         
+// LED-Part von FastLED-Library                  
 // PRIDE This function draws rainbows with an ever-changing,
 // widely-varying set of parameters.
 void pride() 
@@ -1393,8 +1293,6 @@ void writeCard(nfcTagObject nfcTag) {
   delay(100);
                         
 }
-                             
-
 
 /**
    Helper routine to dump a byte array as hex values to Serial.
