@@ -1,5 +1,6 @@
 /* DEV Version Barnosch LED Ring Mod
 5 Tasten + LED Ring (12) MOD
+Zusätzliche StausLED auf PIN 5
 aktuelle DEV_10.2.2019 */
 #include <DFMiniMp3.h>
 #include <EEPROM.h>
@@ -325,11 +326,12 @@ MFRC522::StatusCode status;
 #define buttonPause A0
 #define buttonUp A1
 #define buttonDown A2
-#define buttonVolUp A3         //Zusätzlicher Knopf für Lautstärke hoch
-#define buttonVolDown A4       //Zusätzlicher Knopf für Lautstärke runter
+#define buttonVolUp A3        // Zusätzlicher Knopf für Lautstärke hoch
+#define buttonVolDown A4      // Zusätzlicher Knopf für Lautstärke runter
 #define busyPin 4
-#define shutdownPin 7
-#define LONG_PRESS 3000       //Original bei 1000
+#define shutdownPin 7         
+#define LONG_PRESS 3000       // Original bei 1000
+#define statusLedPin 5        // Pin für die Status led 
 
 Button pauseButton(buttonPause);
 Button upButton(buttonUp);
@@ -372,6 +374,41 @@ void checkStandbyAtMillis() {
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
     cli();  // Disable interrupts
     sleep_mode();
+  }
+}
+
+// fade in/out status led while beeing idle, during playback set to full brightness
+void fadeStatusLed(bool isPlaying) {
+  static bool statusLedDirection = false;
+  static int16_t statusLedValue = 255;
+  static uint64_t statusLedOldMillis;
+
+  // TonUINO spielt nicht (Pause), LED aus
+  if (!isPlaying) {                     // ursprüngliche Funktion mit !(ungleich) umgedreht
+    //statusLedValue = 255;
+    digitalWrite(statusLedPin, LOW);    // wenn an sein soll, wert auf true oder HIGH setzen
+  }
+  // TonUINO spielt, LED fadet ein und aus
+  else {
+    uint64_t statusLedNewMillis = millis();
+    if (statusLedNewMillis - statusLedOldMillis >= 100) {
+      statusLedOldMillis = statusLedNewMillis;
+      if (statusLedDirection) {
+        statusLedValue += 10;
+        if (statusLedValue >= 255) {
+          statusLedValue = 255;
+          statusLedDirection = !statusLedDirection;
+        }
+      }
+      else {
+        statusLedValue -= 10;
+        if (statusLedValue <= 0) {
+          statusLedValue = 0;
+          statusLedDirection = !statusLedDirection;
+        }
+      }
+      analogWrite(statusLedPin, statusLedValue);
+    }
   }
 }
 
@@ -605,7 +642,8 @@ void playShortCut(uint8_t shortCut) {
 void loop() {
   do {
     checkStandbyAtMillis();
- 
+    fadeStatusLed(isPlaying());
+    
   //FastLED Pride Animation. Abspielen sobald etwas läuft
     if (isPlaying()) {    // Prüfen ob gerade etwas läuft und dann die Animation abspielen
       FastLED.setBrightness(BRIGHTNESS2);
@@ -671,9 +709,9 @@ void loop() {
         volume = mp3.getVolume(); // aktuelle Lautstärke abfragen und in Variable schreiben
         Serial.println(volume);      //LEDs grün leuchten lassen         
       FastLED.setBrightness(BRIGHTNESS3);
-      fill_solid(leds, NUM_LEDS, CRGB::Red);  // Red zeigt Grün an
+      fill_solid(leds, NUM_LEDS, CRGB::Green); 
       FastLED.show();
-      FastLED.delay(500);
+      FastLED.delay(250);
       FastLED.clear ();         // alle LEDs ausschalten (falls im Pause Modus
       FastLED.setBrightness(BRIGHTNESS1);
       FastLED.show();                                
@@ -690,9 +728,9 @@ void loop() {
         volume = mp3.getVolume(); // aktuelle Lautstärke abfragen und in Variable schreiben
         Serial.println(volume);
       FastLED.setBrightness(BRIGHTNESS3);
-      fill_solid(leds, NUM_LEDS, CRGB::Green);    //Green zeigt Rot an
+      fill_solid(leds, NUM_LEDS, CRGB::Red); 
       FastLED.show();
-      FastLED.delay(500);
+      FastLED.delay(250);
       FastLED.clear ();        // alle LEDs ausschalten falls im Pause Modus
       FastLED.setBrightness(BRIGHTNESS1);
       FastLED.show();        
