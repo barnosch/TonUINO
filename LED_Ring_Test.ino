@@ -12,21 +12,20 @@ aktuelle DEV_10.2.2019 */
 
 static const uint32_t cardCookie = 322417479;
 
-#include <FastLED.h> // FastLED-Library einbinden
+#include <FastLED.h>              // FastLED-Library einbinden
 #include <Adafruit_NeoPixel.h> Adafruit Neopixel-Library einbinden
   #ifdef __AVR__
   #include <avr/power.h>
   #endif
   #define PIN 6
-  #define NUM_LEDS 12
+  #define NUM_LEDS 12             // Anzahl der LEDs auf dem Ring. Variable für Adafruit und FastLED Library
   Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 
 // FastLED define und Brightness für Adafruit Neopixel
   FASTLED_USING_NAMESPACE
   #define DATA_PIN    6
   #define LED_TYPE    WS2812
-  #define COLOR_ORDER GRB         //RGB
-  #define NUM_LEDS    12
+  #define COLOR_ORDER GRB         //RGB. Falls die Farben des Rings falsch angezeigt werden hier umstellen
   CRGB leds[NUM_LEDS];
   #define BRIGHTNESS1          3  // Helligkeit für FastLED Low (wenn z.B. KEINE Musik gespielt wird)
   #define BRIGHTNESS2          30 // Helligkeit für FastLED High (wenn z.B Musik gespielt wird)
