@@ -469,13 +469,7 @@ void volumeUpButton() {
   if (volume < mySettings.maxVolume) {
     mp3.increaseVolume();
     volume++;
-    FastLED.setBrightness(BRIGHTNESS3);
-      fill_solid(leds, NUM_LEDS, CRGB::Green); //LEDs grün leuchten lassen
-      FastLED.show();
-      FastLED.delay(250);
-      FastLED.clear ();         // alle LEDs ausschalten (falls im Pause Modus
-      FastLED.setBrightness(BRIGHTNESS1);
-      FastLED.show();     
+      
   }
   Serial.println(volume);
 }
@@ -485,14 +479,7 @@ void volumeDownButton() {
   if (volume > mySettings.minVolume) {
     mp3.decreaseVolume();
     volume--;
-    FastLED.setBrightness(BRIGHTNESS3);
-      fill_solid(leds, NUM_LEDS, CRGB::Red); 
-      FastLED.show();
-      FastLED.delay(250);
-      FastLED.clear ();        // alle LEDs ausschalten falls im Pause Modus
-      FastLED.setBrightness(BRIGHTNESS1);
-      FastLED.show();  
-  }
+   }
   Serial.println(volume);
 }
 
@@ -669,6 +656,13 @@ void loop() {
       if (isPlaying()) {
         if (!mySettings.invertVolumeButtons) {
           volumeUpButton();
+          FastLED.setBrightness(BRIGHTNESS3);
+          fill_solid(leds, NUM_LEDS, CRGB::Green); //LEDs grün leuchten lassen
+          FastLED.show();
+          FastLED.delay(250);
+          FastLED.clear ();         // alle LEDs ausschalten (falls im Pause Modus
+          FastLED.setBrightness(BRIGHTNESS1);
+          FastLED.show();   
         }
         else {
           nextButton();
@@ -685,6 +679,13 @@ void loop() {
         }
         else {
           volumeUpButton();
+          FastLED.setBrightness(BRIGHTNESS3);
+          fill_solid(leds, NUM_LEDS, CRGB::Green); //LEDs grün leuchten lassen
+          FastLED.show();
+          FastLED.delay(250);
+          FastLED.clear ();         // alle LEDs ausschalten (falls im Pause Modus
+          FastLED.setBrightness(BRIGHTNESS1);
+          FastLED.show();   
         }
       ignoreUpButton = false;
     }
@@ -693,6 +694,13 @@ void loop() {
       if (isPlaying()) {
         if (!mySettings.invertVolumeButtons) {
           volumeDownButton();
+          FastLED.setBrightness(BRIGHTNESS3);
+          fill_solid(leds, NUM_LEDS, CRGB::Red); 
+          FastLED.show();
+          FastLED.delay(250);
+          FastLED.clear ();        // alle LEDs ausschalten falls im Pause Modus
+          FastLED.setBrightness(BRIGHTNESS1);
+          FastLED.show();  
         }
         else {
           previousButton();
@@ -709,6 +717,13 @@ void loop() {
         }
         else {
           volumeDownButton();
+          FastLED.setBrightness(BRIGHTNESS3);
+          fill_solid(leds, NUM_LEDS, CRGB::Red); 
+          FastLED.show();
+          FastLED.delay(250);
+          FastLED.clear ();        // alle LEDs ausschalten falls im Pause Modus
+          FastLED.setBrightness(BRIGHTNESS1);
+          FastLED.show(); 
         }
       }
       ignoreDownButton = false;
