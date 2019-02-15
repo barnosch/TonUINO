@@ -1,6 +1,6 @@
 /* DEV Version Barnosch LED Ring Mod
-5 Tasten + LED Ring (12) MOD
-Zusätzliche StausLED auf PIN 5
+5 Tasten + LED Ring (24) MOD
+Zusätzliche StatusLED auf PIN 5
 aktuelle DEV_10.2.2019 */
 #include <DFMiniMp3.h>
 #include <EEPROM.h>
@@ -17,13 +17,12 @@ static const uint32_t cardCookie = 322417479;
   #ifdef __AVR__
   #include <avr/power.h>
   #endif
-  #define PIN 6
-  #define NUM_LEDS 12             // Anzahl der LEDs auf dem Ring. Variable für Adafruit und FastLED Library
-  Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
+  #define DATA_PIN 6
+  #define NUM_LEDS 24             // Anzahl der LEDs auf dem Ring. Variable für Adafruit und FastLED Library
+  Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, DATA_PIN, NEO_GRB + NEO_KHZ800);
 
 // FastLED define und Brightness für Adafruit Neopixel
   FASTLED_USING_NAMESPACE
-  #define DATA_PIN    6
   #define LED_TYPE    WS2812
   #define COLOR_ORDER GRB         //RGB. Falls die Farben des Rings falsch angezeigt werden hier umstellen
   CRGB leds[NUM_LEDS];
