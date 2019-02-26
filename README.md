@@ -7,6 +7,7 @@
 
 # LED Ring Version - 5 Tasten StatusLED - DEV Version
  -Tonuino_2.1_LEDRing_StatusLED.ino-
+ 
 <FastLED.h> und <Adafruit_NeoPixel.h> Bibliotheken werden zusätzlich für den LED Ring benötigt
 Nun alles Optional definierbar, siehe Code
 - 5 Tasten - 2 Zusätzliche Taster für die Lautstärke (A3 und A4)
