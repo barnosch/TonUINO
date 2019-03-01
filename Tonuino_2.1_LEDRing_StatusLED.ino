@@ -48,7 +48,7 @@ static const uint32_t cardCookie = 322417479;
   #define BRIGHTNESS4          10 
   #define STARTBRIGHTNESS      50 // Helligkeit für ADAFRUIT-Library
   #define FRAMES_PER_SECOND   120 
-  uint8_t gHue = 0;               //rotating "base color" used by many of the patterns         
+  uint8_t gHue = 0; // rotating "base color" used by many of the patterns
 #endif                       
 
 // DFPlayer Mini
@@ -350,7 +350,7 @@ MFRC522::StatusCode status;
 #define buttonFivePin A4
 #endif                        
 
-#define LONG_PRESS 3000       // Original bei 1000                       
+#define LONG_PRESS 2000       // Original bei 1000                       
 
 Button pauseButton(buttonPause);
 Button upButton(buttonUp);
@@ -367,7 +367,7 @@ bool ignoreDownButton = false;
 #ifdef FIVEBUTTONS
 bool ignoreButtonFour = false;
 bool ignoreButtonFive = false;
-#endif  
+#endif 
 
 /// Funktionen für den Standby Timer (z.B. über Pololu-Switch oder Mosfet)
 
@@ -466,13 +466,12 @@ void setup() {
   rainbowCycle(5);                    //RainbowCycle von Adafruit abspielen
   rainbowCycle(5);                    //das zweite mal, weils so schön ist
   colorWipe(strip.Color(0, 0, 0), 0); // AUS
-  strip.show();
-  
-  // FastLED initialize
+  strip.show(); 
+// FastLED initialize
   FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
-  FastLED.setBrightness(BRIGHTNESS1);
-  FastLED.show();
-#endif  
+  FastLED.setBrightness(BRIGHTNESS3);  
+#endif //LEDRING
+  
   Serial.begin(115200); // Es gibt ein paar Debug Ausgaben über die serielle Schnittstelle
   randomSeed(analogRead(A7)); // Zufallsgenerator initialisieren
 
@@ -531,7 +530,6 @@ void setup() {
     Serial.println(F("Reset -> EEPROM wird gelöscht"));
     for (int i = 0; i < EEPROM.length(); i++) {
       EEPROM.update(i, 0);
-       
     }
   }
  */ 
@@ -676,23 +674,23 @@ void playShortCut(uint8_t shortCut) {
     Serial.println(F("Shortcut not configured!"));
 }
 
-void loop() {
+void loop() 
+{
   do {
     checkStandbyAtMillis();
-#ifdef STATUSLED     
-    fadeStatusLed(isPlaying());
-#endif
-#ifdef LEDRING 
-  //FastLED Pride Animation. Abspielen sobald etwas läuft
-    if (isPlaying()) {    // Prüfen ob gerade etwas läuft und dann die Animation abspielen
-      FastLED.setBrightness(BRIGHTNESS2);
+    #ifdef STATUSLED     
+      fadeStatusLed(isPlaying());
+    #endif
+    #ifdef LEDRING
+    //Pride Animation. Abspielen sobald etwas läuft
+    if (isPlaying()) {    // Prüfen ob gerade etwas läuft un dann die Animation abspielen
+      FastLED.setBrightness(BRIGHTNESS2); // Helligkeit 2
       pride();
       FastLED.show();
-      }     
-#endif    
+      }
+    #endif  
     mp3.loop();
-    // Buttons werden nun über JS_Button gehandelt, dadurch kann jede Taste
-    // doppelt belegt werden
+    // Buttons werden nun über JS_Button gehandelt, dadurch kann jede Taste doppelt belegt werden
     readButtons();
 
     // admin menu
@@ -749,8 +747,8 @@ void loop() {
       if (isPlaying()) {
         if (!mySettings.invertVolumeButtons) {
           volumeUpButton();
-        #ifdef LEDRING
-          // Grün leuchten bei Lautsträrke hoch
+          #ifdef LEDRING
+          // Grün leuchten bei Lautstärke hoch
           Serial.println(F("Volume Up"));        
           mp3.increaseVolume();
             volume = mp3.getVolume();               // Lautstärke abfragen und in Variable schreiben
@@ -780,6 +778,20 @@ void loop() {
         }
         else {
           volumeUpButton();
+          #ifdef LEDRING
+          // Grün leuchten bei Lautstärke hoch
+          Serial.println(F("Volume Up"));        
+          mp3.increaseVolume();
+            volume = mp3.getVolume();               // Lautstärke abfragen und in Variable schreiben
+            Serial.println(volume);             
+          FastLED.setBrightness(BRIGHTNESS3);
+          fill_solid(leds, NUM_LEDS, CRGB::Green);  //LEDs grün leuchten lassen   
+          FastLED.show();
+          FastLED.delay(250);
+          FastLED.clear ();                         // alle LEDs ausschalten
+          FastLED.setBrightness(BRIGHTNESS1);
+          FastLED.show();
+        #endif
         }
       ignoreUpButton = false;
     }
@@ -789,6 +801,20 @@ void loop() {
       if (isPlaying()) {
         if (!mySettings.invertVolumeButtons) {
           volumeDownButton();
+          #ifdef LEDRING
+        // Rot leuchten bei Lautstärke runter  
+          Serial.println(F("Volume Down"));
+          mp3.decreaseVolume();
+            volume = mp3.getVolume();               // Lautstärke abfragen und in Variable schreiben
+            Serial.println(volume);
+          FastLED.setBrightness(BRIGHTNESS3);
+          fill_solid(leds, NUM_LEDS, CRGB::Red); 
+          FastLED.show();
+          FastLED.delay(250);
+          FastLED.clear ();                         // alle LEDs ausschalten
+          FastLED.setBrightness(BRIGHTNESS1);
+          FastLED.show();
+        #endif
         }
         else {
           previousButton();
@@ -1393,7 +1419,28 @@ void pride()
     nblend( leds[pixelnumber], newcolor, 64);
   }
 }
-#endif
+
+void bpm()
+{
+  // colored stripes pulsing at a defined Beats-Per-Minute (BPM)
+  uint8_t BeatsPerMinute = 80;
+  CRGBPalette16 palette = PartyColors_p;
+  uint8_t beat = beatsin8( BeatsPerMinute, 64, 255);
+  for( int i = 0; i < NUM_LEDS; i++) { //9948
+    leds[i] = ColorFromPalette(palette, gHue+(i*2), beat-gHue+(i*10));
+  }
+}
+
+void juggle() {
+  // eight colored dots, weaving in and out of sync with each other
+  fadeToBlackBy( leds, NUM_LEDS, 20);
+  byte dothue = 0;
+  for( int i = 0; i < 8; i++) {
+    leds[beatsin16( i+7, 0, NUM_LEDS-1 )] |= CHSV(dothue, 200, 255);
+    dothue += 32;
+  }
+}
+#endif //LEDRING
                                    
 void writeCard(nfcTagObject nfcTag) {
   MFRC522::PICC_Type mifareType;
