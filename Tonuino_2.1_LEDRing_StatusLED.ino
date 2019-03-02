@@ -46,9 +46,8 @@ static const uint32_t cardCookie = 322417479;
   #define BRIGHTNESS2          30 // Helligkeit für FastLED High (wenn z.B Musik gespielt wird)
   #define BRIGHTNESS3          50 // Helligkeit für FastLED bei Bestätigung z.B. Blinken o.ä.
   #define BRIGHTNESS4          10 
-  #define STARTBRIGHTNESS      50 // Helligkeit für ADAFRUIT-Library
   #define FRAMES_PER_SECOND   120 
-  uint8_t gHue = 0; // rotating "base color" used by many of the patterns
+  uint8_t gHue = 0;               // rotating "base color" used by many of the patterns
 #endif                       
 
 // DFPlayer Mini
@@ -340,8 +339,6 @@ MFRC522::StatusCode status;
 #define buttonPause A0
 #define buttonUp A1
 #define buttonDown A2
-//#define buttonVolUp A3        // Zusätzlicher Knopf für Lautstärke hoch
-//#define buttonVolDown A4      // Zusätzlicher Knopf für Lautstärke runter
 #define busyPin 4
 #define shutdownPin 7         
 
@@ -355,8 +352,6 @@ MFRC522::StatusCode status;
 Button pauseButton(buttonPause);
 Button upButton(buttonUp);
 Button downButton(buttonDown);
-//Button VolUpButton(buttonVolUp);         //Knopf für Lautstärke hoch
-//Button VolDownButton(buttonVolDown);     //Knopf für Lautstärke runter
 #ifdef FIVEBUTTONS
 Button buttonFour(buttonFourPin);
 Button buttonFive(buttonFivePin);
@@ -459,17 +454,16 @@ void waitForTrackToFinish() {
 
 void setup() {
 #ifdef LEDRING  
-  // Adafruit Animation zum Start
+  // Adafruit Animation zum Start. FASTLED Animationen funktionieren an der Stelle leider nicht
   strip.begin();
   strip.show();                       // Initialize all pixels to 'off'
-  strip.setBrightness(STARTBRIGHTNESS);
+  strip.setBrightness(BRIGHTNESS3);
   rainbowCycle(5);                    //RainbowCycle von Adafruit abspielen
   rainbowCycle(5);                    //das zweite mal, weils so schön ist
   colorWipe(strip.Color(0, 0, 0), 0); // AUS
   strip.show(); 
 // FastLED initialize
-  FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
-  FastLED.setBrightness(BRIGHTNESS3);  
+  FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);  
 #endif //LEDRING
   
   Serial.begin(115200); // Es gibt ein paar Debug Ausgaben über die serielle Schnittstelle
@@ -496,13 +490,10 @@ void setup() {
 
   // DFPlayer Mini initialisieren
   mp3.begin();
-  // Eine Sekunde warten bis der DFPlayer Mini initialisiert ist (orig ist 2sek)
-  delay(1000);
+  delay(2000);                  // Zwei Sekunden warten bis der DFPlayer Mini initialisiert ist
   volume = mySettings.initVolume;
   mp3.setVolume(volume);
-  mp3.setEq(mySettings.eq - 1);
-  // Fix für das Problem mit dem Timeout (ist jetzt in Upstream daher nicht mehr nötig!)
-  //mySoftwareSerial.setTimeout(10000);              
+  mp3.setEq(mySettings.eq - 1);           
   // NFC Leser initialisieren
   SPI.begin();        // Init SPI bus
   mfrc522.PCD_Init(); // Init MFRC522
@@ -519,20 +510,9 @@ void setup() {
   pinMode(buttonFourPin, INPUT_PULLUP);
   pinMode(buttonFivePin, INPUT_PULLUP);
 #endif                  
-//  pinMode(buttonVolUp, INPUT_PULLUP);         //Zusätzliche Buttons Vol Up
-//  pinMode(buttonVolDown, INPUT_PULLUP);       //Zusätzliche Buttons Vol down
   pinMode(shutdownPin, OUTPUT);
   digitalWrite(shutdownPin, LOW);
 
-/*  // RESET --- ALLE DREI KNÖPFE BEIM STARTEN GEDRÜCKT HALTEN -> alle EINSTELLUNGEN werden gelöscht
-  if (digitalRead(buttonPause) == LOW && digitalRead(buttonUp) == LOW &&
-      digitalRead(buttonDown) == LOW) {
-    Serial.println(F("Reset -> EEPROM wird gelöscht"));
-    for (int i = 0; i < EEPROM.length(); i++) {
-      EEPROM.update(i, 0);
-    }
-  }
- */ 
   // Start Shortcut "at Startup" - e.g. Welcome Sound
   playShortCut(3);              
 }
@@ -541,8 +521,6 @@ void readButtons() {
   pauseButton.read();
   upButton.read();
   downButton.read();
-//  VolUpButton.read();        //Zusätzliche Buttons 
-//  VolDownButton.read();      //Zusätzliche Buttons
 #ifdef FIVEBUTTONS
   buttonFour.read();
   buttonFive.read();
@@ -683,7 +661,7 @@ void loop()
     #endif
     #ifdef LEDRING
     //Pride Animation. Abspielen sobald etwas läuft
-    if (isPlaying()) {    // Prüfen ob gerade etwas läuft un dann die Animation abspielen
+    if (isPlaying()) {    // Prüfen ob gerade etwas läuft und ann die Animation abspielen
       FastLED.setBrightness(BRIGHTNESS2); // Helligkeit 2
       pride();
       FastLED.show();
@@ -1377,8 +1355,7 @@ uint32_t Wheel(byte WheelPos) {
 }
 
 // LED-Part von FastLED-Library                  
-// PRIDE This function draws rainbows with an ever-changing,
-// widely-varying set of parameters.
+// PRIDE This function draws rainbows with an ever-changing, widely-varying set of parameters.
 void pride() 
 {
   static uint16_t sPseudotime = 0;
@@ -1417,27 +1394,6 @@ void pride()
     pixelnumber = (NUM_LEDS-1) - pixelnumber;
     
     nblend( leds[pixelnumber], newcolor, 64);
-  }
-}
-
-void bpm()
-{
-  // colored stripes pulsing at a defined Beats-Per-Minute (BPM)
-  uint8_t BeatsPerMinute = 80;
-  CRGBPalette16 palette = PartyColors_p;
-  uint8_t beat = beatsin8( BeatsPerMinute, 64, 255);
-  for( int i = 0; i < NUM_LEDS; i++) { //9948
-    leds[i] = ColorFromPalette(palette, gHue+(i*2), beat-gHue+(i*10));
-  }
-}
-
-void juggle() {
-  // eight colored dots, weaving in and out of sync with each other
-  fadeToBlackBy( leds, NUM_LEDS, 20);
-  byte dothue = 0;
-  for( int i = 0; i < 8; i++) {
-    leds[beatsin16( i+7, 0, NUM_LEDS-1 )] |= CHSV(dothue, 200, 255);
-    dothue += 32;
   }
 }
 #endif //LEDRING
@@ -1527,8 +1483,7 @@ void writeCard(nfcTagObject nfcTag) {
   else
     mp3.playMp3FolderTrack(400);
   Serial.println();
-  delay(100);
-                        
+  delay(100);                   
 }
 
 /**
