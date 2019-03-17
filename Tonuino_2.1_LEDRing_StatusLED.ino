@@ -463,7 +463,7 @@ void setup() {
   strip.show();                       // Initialize all pixels to 'off'
   strip.setBrightness(BRIGHTNESS3);
   rainbowCycle(5);                    //RainbowCycle von Adafruit abspielen
-  rainbowCycle(5);                    //das zweite mal, weils so schön ist
+  // rainbowCycle(5);                 //das zweite mal, weils so schön ist. Dauert den Zwergen meist zu lang ;)
   colorWipe(strip.Color(0, 0, 0), 0); // AUS
   strip.show(); 
 // FastLED initialize
