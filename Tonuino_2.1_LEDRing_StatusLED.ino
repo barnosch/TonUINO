@@ -33,15 +33,10 @@ static const uint32_t cardCookie = 322417479;
 
 #ifdef LEDRING
   #include <FastLED.h>              // FastLED-Library einbinden
-  #include <Adafruit_NeoPixel.h>    // Adafruit Neopixel-Library einbinden
-  #ifdef __AVR__
-  #include <avr/power.h>
-  #endif
   #define DATA_PIN 6
-  #define NUM_LEDS 24             // Anzahl der LEDs auf dem Ring. Variable für Adafruit und FastLED Library
-  Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, DATA_PIN, NEO_GRB + NEO_KHZ800);
+  #define NUM_LEDS 24             // Anzahl der LEDs auf dem Ring
 
-// FastLED define und Brightness für Adafruit Neopixel
+// FastLED define und Brightness
   FASTLED_USING_NAMESPACE
   #define LED_TYPE    WS2812
   #define COLOR_ORDER GRB         //RGB. Falls die Farben des Rings falsch angezeigt werden hier umstellen
@@ -51,7 +46,6 @@ static const uint32_t cardCookie = 322417479;
   #define BRIGHTNESS3          50 // Helligkeit für FastLED bei Bestätigung z.B. Blinken o.ä.
   #define BRIGHTNESS4          10 
   #define FRAMES_PER_SECOND   120 
-  uint8_t gHue = 0;               // rotating "base color" used by many of the patterns
 #endif                       
 
 // DFPlayer Mini
@@ -458,17 +452,8 @@ void waitForTrackToFinish() {
 
 void setup() {
 #ifdef LEDRING  
-  // Adafruit Animation zum Start. FASTLED Animationen funktionieren an der Stelle leider nicht
-  strip.begin();
-  strip.show();                       // Initialize all pixels to 'off'
-  strip.setBrightness(BRIGHTNESS3);
-  rainbowCycle(5);                    //RainbowCycle von Adafruit abspielen
-  // rainbowCycle(5);                 //das zweite mal, weils so schön ist. Dauert den Zwergen meist zu lang ;)
-  colorWipe(strip.Color(0, 0, 0), 0); // AUS
-  strip.show(); 
-// FastLED initialize
   FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);  
-#endif //LEDRING
+#endif
   
   Serial.begin(115200); // Es gibt ein paar Debug Ausgaben über die serielle Schnittstelle
   randomSeed(analogRead(A7)); // Zufallsgenerator initialisieren
@@ -494,7 +479,7 @@ void setup() {
 
   // DFPlayer Mini initialisieren
   mp3.begin();
-  delay(2000);                  // Zwei Sekunden warten bis der DFPlayer Mini initialisiert ist
+  delay(1500);                  // 1,5 Sekunden warten bis der DFPlayer Mini initialisiert ist (orig 2sek)
   volume = mySettings.initVolume;
   mp3.setVolume(volume);
   mp3.setEq(mySettings.eq - 1);           
@@ -1410,39 +1395,6 @@ bool readCard(nfcTagObject * nfcTag) {
 }         
 
 #ifdef LEDRING        
-// LED-Part von Adafruit-Library
-void colorWipe(uint32_t c, uint8_t wait) { // Adafruit´s - Fill the dots one after the other with a color
-  for (uint16_t i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, c);
-    strip.show();
-    delay(wait);
-  }
-}
-void rainbowCycle(uint8_t wait) { // Adafruit´s Rainbow Cycle
-  uint16_t i, j;
-  for (j = 0; j < 256 * 2; j++) { // 1 cycles of all colors on wheel
-    for (i = 0; i < strip.numPixels(); i++) {
-      strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
-    }
-    strip.show();
-    delay(wait);
-  }
-}
-// Input a value 0 to 255 to get a color value.
-// The colours are a transition r - g - b - back to r.
-uint32_t Wheel(byte WheelPos) {
-  WheelPos = 255 - WheelPos;
-  if (WheelPos < 85) {
-    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  }
-  if (WheelPos < 170) {
-    WheelPos -= 85;
-    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-  }
-  WheelPos -= 170;
-  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-}
-
 // LED-Part von FastLED-Library                  
 // PRIDE This function draws rainbows with an ever-changing, widely-varying set of parameters.
 void pride() 
