@@ -1,6 +1,9 @@
 # LED Ring Version - StatusLED - DEV Version
 
 SIMPLE DISPLAY Tests
+Not yet working. Trying to find a very small library and get it to work.
+Planned: Showing current Volume
+
  
 <FastLED.h> Bibliothek wird zusätzlich für den LED Ring benötigt
 Nun alles Optional definierbar, siehe Code
