@@ -1,12 +1,6 @@
-# Barnoschs TonUINO Version
-
-- 5 Tasten Mod & LED Status
-- 2 Zusätzliche Taster für die Lautstärke (A3 und A4)
-- Pause: LED ist aus
-- Play : LED fadet ein und aus
-
 # LED Ring Version - StatusLED - DEV Version
- -Tonuino_2.1_LEDRing_StatusLED.ino-
+
+SIMPLE DISPLAY Tests
  
 <FastLED.h> Bibliothek wird zusätzlich für den LED Ring benötigt
 Nun alles Optional definierbar, siehe Code
