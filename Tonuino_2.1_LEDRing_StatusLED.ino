@@ -1,9 +1,9 @@
-/* DEV Version Barnosch LED Ring Mod - 12.5.2019
+/* DEV Version Barnosch LED Ring Mod - 31.5.2019
 Optional: 5 Tasten 
 Optional: LED Ring (24) MOD
 Optional: Zusätzliche StatusLED auf PIN 5
 Extra LEDs für Lauter/Weiter und Leiser/Zurück
-Orig DEV Version_Stand 10.5.2019 */
+Orig DEV Version_Stand 12.5.2019 */
 #include <DFMiniMp3.h>
 #include <EEPROM.h>
 #include <JC_Button.h>
@@ -23,21 +23,20 @@ Orig DEV Version_Stand 10.5.2019 */
     Information and contribution at https://tonuino.de.
 */
 static const uint32_t cardCookie = 322417479; 
-//#define FIVEBUTTONS         // uncomment the line to enable five button support
-#define STATUSLED             // 1/2 uncomment the two lines to enable the StatusLED
-#define statusLedPin 5        // 2/2 Pin für die Status LED
-#define PLUSMINUS             // 1/3 uncomment if no LED Buttons are used
-#define louderLED 7           // 2/3 Pin für Louder/Next LED
-#define lowerLED 8            // 3/3 Pin für Lower/Previous LED
-#define LEDRING               // uncomment the line to enable LED RING support
+#define FIVEBUTTONS               // uncomment the line to enable five button support
+#define STATUSLED                 // 1/2 uncomment the two lines to enable the StatusLED
+#define statusLedPin 5            // 2/2 Pin für die Status LED
+//#define PLUSMINUS               // 1/3 uncomment if no LED Buttons are used
+//#define louderLED 7             // 2/3 Pin für Louder/Next LED
+//#define lowerLED 8              // 3/3 Pin für Lower/Previous LED
+//#define LEDRING                 // uncomment the line to enable LED RING support
 
 #ifdef LEDRING
   #include <FastLED.h>            // FastLED-Library einbinden
   #define DATA_PIN 6
   #define NUM_LEDS 24             // Anzahl der LEDs auf dem Ring
 
-// FastLED define und Brightness
-  FASTLED_USING_NAMESPACE
+  FASTLED_USING_NAMESPACE         // FastLED define und Brightness
   #define LED_TYPE    WS2812
   #define COLOR_ORDER GRB         //RGB. Falls die Farben des Rings falsch angezeigt werden hier umstellen
   CRGB leds[NUM_LEDS];
@@ -87,14 +86,14 @@ struct adminSettings {
   bool invertVolumeButtons;
   folderSettings shortCuts[4];
   uint8_t adminMenuLocked;
-  uint8_t adminMenuPin[4];                        
+  uint8_t adminMenuPin[4];
 };
 
 adminSettings mySettings;
 nfcTagObject myCard;
 folderSettings *myFolder;
 unsigned long sleepAtMillis = 0;
-static uint16_t _lastTrackFinished;                                   
+static uint16_t _lastTrackFinished;
 
 static void nextTrack(uint16_t track);
 uint8_t voiceMenu(int numberOfOptions, int startMessage, int messageOffset,
@@ -103,7 +102,7 @@ bool isPlaying();
 bool checkTwo ( uint8_t a[], uint8_t b[] );
 void writeCard(nfcTagObject nfcTag);
 void dump_byte_array(byte * buffer, byte bufferSize);
-void adminMenu(bool fromCard = false);                                           
+void adminMenu(bool fromCard = false);
 bool knownCard = false;
 
 // implement a notification class,
@@ -140,7 +139,7 @@ class Mp3Notify {
     }
     static void OnUsbRemoved(uint16_t code) {
       Serial.println(F("USB entfernt "));
-    }                                           
+    }
 };
 
 static DFMiniMp3<SoftwareSerial, Mp3Notify> mp3(mySoftwareSerial);
@@ -160,10 +159,10 @@ void shuffleQueue() {
     queue[i] = queue[j];
     queue[j] = t;
   }
-   /*  Serial.println(F("Queue :"));
+/*  Serial.println(F("Queue :"));
     for (uint8_t x = 0; x < numTracksInFolder - firstTrack + 1 ; x++)
       Serial.println(queue[x]);
-  */
+*/
 }
 
 void writeSettingsToFlash() {
@@ -175,7 +174,7 @@ void writeSettingsToFlash() {
 void resetSettings() {
   Serial.println(F("=== resetSettings()"));
   mySettings.cookie = cardCookie;
-  mySettings.version = 1;
+  mySettings.version = 2;
   mySettings.maxVolume = 25;
   mySettings.minVolume = 5;
   mySettings.initVolume = 15;
@@ -192,7 +191,7 @@ void resetSettings() {
   mySettings.adminMenuPin[1] = 1;
   mySettings.adminMenuPin[2] = 1;
   mySettings.adminMenuPin[3] = 1;
-                             
+
   writeSettingsToFlash();
 }
 
@@ -241,14 +240,15 @@ void loadSettingsFromFlash() {
 
   Serial.print(F("Inverted Volume Buttons: "));
   Serial.println(mySettings.invertVolumeButtons);
-   Serial.print(F("Admin Menu locked: "));
+
+  Serial.print(F("Admin Menu locked: "));
   Serial.println(mySettings.adminMenuLocked);
 
   Serial.print(F("Admin Menu Pin: "));
   Serial.print(mySettings.adminMenuPin[0]);
   Serial.print(mySettings.adminMenuPin[1]);
   Serial.print(mySettings.adminMenuPin[2]);
-  Serial.println(mySettings.adminMenuPin[3]);                                                             
+  Serial.println(mySettings.adminMenuPin[3]);
 }
 
 class Modifier {
@@ -532,8 +532,9 @@ class FeedbackModifier: public Modifier {
       return false;
     }
 };
+
 // Leider kann das Modul selbst keine Queue abspielen, daher müssen wir selbst die Queue verwalten
-                                   
+
 static void nextTrack(uint16_t track) {
   Serial.println(track);
   if (activeModifier != NULL)
@@ -543,14 +544,16 @@ static void nextTrack(uint16_t track) {
   if (track == _lastTrackFinished) {
     return;
   }
-                                       
+  
   _lastTrackFinished = track;
 
   if (knownCard == false)
     // Wenn eine neue Karte angelernt wird soll das Ende eines Tracks nicht verarbeitet werden
+                         
     return;
 
   Serial.println(F("=== nextTrack()"));                                     
+  
   if (myFolder->mode == 1 || myFolder->mode == 7) {
     Serial.println(F("Hörspielmodus ist aktiv -> keinen neuen Track spielen"));
     setstandbyTimer();
@@ -664,14 +667,15 @@ MFRC522::StatusCode status;
 #define buttonUp    A1
 #define buttonDown  A2
 #define busyPin     4
-#define shutdownPin 7         
+#define shutdownPin 7
+#define openAnalogPin A7                        
 
 #ifdef FIVEBUTTONS
 #define buttonFourPin A3
 #define buttonFivePin A4
-#endif                        
+#endif
 
-#define LONG_PRESS 1500       // Original bei 1000                       
+#define LONG_PRESS 1500             // Original bei 1000
 
 Button pauseButton(buttonPause);
 Button upButton(buttonUp);
@@ -686,7 +690,7 @@ bool ignoreDownButton = false;
 #ifdef FIVEBUTTONS
 bool ignoreButtonFour = false;
 bool ignoreButtonFive = false;
-#endif 
+#endif
 
 /// Funktionen für den Standby Timer (z.B. über Pololu-Switch oder Mosfet)
 
@@ -735,7 +739,7 @@ void fadeStatusLed(bool isPlaying) {
     statusLedValue = 255;
     digitalWrite(statusLedPin, LOW);    // wenn an sein soll, wert HIGH setzen
   }
-  // TonUINO spielt nicht, LED fadet ein und aus
+  // TonUINO spielt nicht, Status-LED fadet ein und aus
   else {
     uint64_t statusLedNewMillis = millis();
     if (statusLedNewMillis - statusLedOldMillis >= 100) {
@@ -782,7 +786,15 @@ void setup() {
 #endif
   
   Serial.begin(115200); // Es gibt ein paar Debug Ausgaben über die serielle Schnittstelle
-  randomSeed(analogRead(A7)); // Zufallsgenerator initialisieren
+   
+  // Wert für randomSeed() erzeugen durch das mehrfache Sammeln von rauschenden LSBs eines offenen Analogeingangs
+  uint32_t ADC_LSB;
+  uint32_t ADCSeed;
+  for(uint8_t i = 0; i < 128; i++) {
+    ADC_LSB = analogRead(openAnalogPin) & 0x1;
+    ADCSeed ^= ADC_LSB << (i % 32); 
+  }
+  randomSeed(ADCSeed); // Zufallsgenerator initialisieren
 
   // Dieser Hinweis darf nicht entfernt werden
   Serial.println(F("\n _____         _____ _____ _____ _____"));
@@ -805,10 +817,14 @@ void setup() {
 
   // DFPlayer Mini initialisieren
   mp3.begin();
-  delay(1500);                  // 1,5 Sekunden warten bis der DFPlayer Mini initialisiert ist (orig 2sek)
+  delay(2000);             // Zwei Sekunden warten bis der DFPlayer Mini initialisiert ist
+              
   volume = mySettings.initVolume;
   mp3.setVolume(volume);
-  mp3.setEq(mySettings.eq - 1);           
+  mp3.setEq(mySettings.eq - 1);
+                                                                                          
+                                       
+
   // NFC Leser initialisieren
   SPI.begin();        // Init SPI bus
   mfrc522.PCD_Init(); // Init MFRC522
@@ -841,11 +857,14 @@ void setup() {
     loadSettingsFromFlash();
   }
 
+
   // Start Shortcut "at Startup" - e.g. Welcome Sound
   playShortCut(3);
+#ifdef LEDRING  
   FastLED.clear ();                         // alle LEDs ausschalten
   FastLED.setBrightness(BRIGHTNESS1);
-  FastLED.show();             
+  FastLED.show();
+#endif            
 }
 
 void readButtons() {
@@ -855,14 +874,14 @@ void readButtons() {
 #ifdef FIVEBUTTONS
   buttonFour.read();
   buttonFive.read();
-#endif                    
+#endif
 }
 
 void volumeUpButton() {
-   if (activeModifier != NULL)
+  if (activeModifier != NULL)
     if (activeModifier->handleVolumeUp() == true)
       return;
-                               
+   
   Serial.println(F("=== volumeUp()"));
   if (volume < mySettings.maxVolume) {
     mp3.increaseVolume();
@@ -872,9 +891,10 @@ void volumeUpButton() {
 }
 
 void volumeDownButton() {
-   if (activeModifier != NULL)
+  if (activeModifier != NULL)
     if (activeModifier->handleVolumeDown() == true)
       return;
+
   Serial.println(F("=== volumeDown()"));
   if (volume > mySettings.minVolume) {
     mp3.decreaseVolume();
@@ -884,9 +904,10 @@ void volumeDownButton() {
 }
 
 void nextButton() {
-   if (activeModifier != NULL)
+  if (activeModifier != NULL)
     if (activeModifier->handleNextButton() == true)
-      return;          
+      return;
+
   nextTrack(random(65536));
   delay(1000);
 }
@@ -894,15 +915,15 @@ void nextButton() {
 void previousButton() {
   if (activeModifier != NULL)
     if (activeModifier->handlePreviousButton() == true)
-      return;           
+      return;
+
   previousTrack();
   delay(1000);
 }
 
 void playFolder() {
-  Serial.println(F("== playFolder()")) ;                                    
+  Serial.println(F("== playFolder()")) ;
   disablestandbyTimer();
-  randomSeed(millis() + random(1000));
   knownCard = true;
   _lastTrackFinished = 0;
   numTracksInFolder = mp3.getFolderTrackCount(myFolder->folder);
@@ -1023,11 +1044,14 @@ void loop()
      }
     #endif  
     mp3.loop();
+
     // Modifier : WIP!
     if (activeModifier != NULL) {
       activeModifier->loop();
     }                         
-    // Buttons werden nun über JS_Button gehandelt, dadurch kann jede Taste doppelt belegt werden
+
+    // Buttons werden nun über JS_Button gehandelt, dadurch kann jede Taste doppelt belegt werden                        
+                            
     readButtons();
 
     // admin menu
@@ -1053,7 +1077,7 @@ void loop()
           FastLED.clear ();
           FastLED.show();
       #endif
-          setstandbyTimer();            
+          setstandbyTimer();
         }
         else if (knownCard) {
           mp3.start();
@@ -1064,7 +1088,7 @@ void loop()
                ignorePauseButton == false) {
       if (activeModifier != NULL)
         if (activeModifier->handlePause() == true)
-          return;                            
+          return;
       if (isPlaying()) {
         uint8_t advertTrack;
         if (myFolder->mode == 3 || myFolder->mode == 9) {
@@ -1090,19 +1114,21 @@ void loop()
       if (isPlaying()) {
         if (!mySettings.invertVolumeButtons) {
           volumeUpButton();
-          #ifdef LEDRING
+        #ifdef LEDRING
           // Grün leuchten bei Lautstärke hoch
           Serial.println(F("Volume Up"));        
           mp3.increaseVolume();
             volume = mp3.getVolume();               // Lautstärke abfragen und in Variable schreiben
-          //  Serial.println(volume);             
+          Serial.println(volume);             
           FastLED.setBrightness(BRIGHTNESS3);
           fill_solid(leds, NUM_LEDS, CRGB::Green);  //LEDs grün leuchten lassen   
           FastLED.show();
-          FastLED.delay(250);
+          FastLED.delay(150);
           FastLED.clear ();                         // alle LEDs ausschalten
           FastLED.setBrightness(BRIGHTNESS1);
           FastLED.show();
+        #endif  
+        #ifdef PLUSMINUS                            // Kurz blinken lassen  
           digitalWrite(louderLED, HIGH);
           delay(100);
           digitalWrite(louderLED, LOW);
@@ -1114,9 +1140,11 @@ void loop()
         }
         else {
           nextButton();
+        #ifdef PLUSMINUS  
           digitalWrite(louderLED, HIGH);
           delay(250);
           digitalWrite(louderLED, LOW);
+        #endif  
         }
       }
       else {
@@ -1128,22 +1156,24 @@ void loop()
       if (!ignoreUpButton)
         if (!mySettings.invertVolumeButtons) {
           nextButton();
+        #ifdef PLUSMINUS
           digitalWrite(louderLED, HIGH);
           delay(250);
           digitalWrite(louderLED, LOW);
+        #endif
         }
         else {
           volumeUpButton();
-          #ifdef LEDRING
+        #ifdef LEDRING
           // Grün leuchten bei Lautstärke hoch
           Serial.println(F("Volume Up"));        
           mp3.increaseVolume();
             volume = mp3.getVolume();               // Lautstärke abfragen und in Variable schreiben
-          //  Serial.println(volume);             
+          Serial.println(volume);             
           FastLED.setBrightness(BRIGHTNESS3);
           fill_solid(leds, NUM_LEDS, CRGB::Green);  //LEDs grün leuchten lassen   
           FastLED.show();
-          FastLED.delay(250);
+          FastLED.delay(150);
           FastLED.clear ();                         // alle LEDs ausschalten
           FastLED.setBrightness(BRIGHTNESS1);
           FastLED.show();
@@ -1166,16 +1196,16 @@ void loop()
       if (isPlaying()) {
         if (!mySettings.invertVolumeButtons) {
           volumeDownButton();
-          #ifdef LEDRING
+        #ifdef LEDRING
         // Rot leuchten bei Lautstärke runter  
           Serial.println(F("Volume Down"));
           mp3.decreaseVolume();
             volume = mp3.getVolume();               // Lautstärke abfragen und in Variable schreiben
-          //  Serial.println(volume);
+          Serial.println(volume);
           FastLED.setBrightness(BRIGHTNESS3);
           fill_solid(leds, NUM_LEDS, CRGB::Red);    // Rot
           FastLED.show();
-          FastLED.delay(250);
+          FastLED.delay(150);
           FastLED.clear ();                         // alle LEDs ausschalten
           FastLED.setBrightness(BRIGHTNESS1);
           FastLED.show();   
@@ -1192,9 +1222,11 @@ void loop()
         }
         else {
           previousButton();
+        #ifdef PLUSMINUS  
           digitalWrite(lowerLED, HIGH);
           delay(250);
           digitalWrite(lowerLED, LOW);
+        #endif  
         }
       }
       else {
@@ -1206,18 +1238,20 @@ void loop()
       if (!ignoreDownButton) {
         if (!mySettings.invertVolumeButtons) {
           previousButton();
+        #ifdef PLUSMINUS  
           digitalWrite(lowerLED, HIGH);
           delay(250);
           digitalWrite(lowerLED, LOW);
+        #endif  
         }
         else {
           volumeDownButton();
-          #ifdef LEDRING
+        #ifdef LEDRING
         // Rot leuchten bei Lautstärke runter  
           Serial.println(F("Volume Down"));
           mp3.decreaseVolume();
             volume = mp3.getVolume();               // Lautstärke abfragen und in Variable schreiben
-          //  Serial.println(volume);
+          Serial.println(volume);
           FastLED.setBrightness(BRIGHTNESS3);
           fill_solid(leds, NUM_LEDS, CRGB::Red);    // Rot
           FastLED.show();
@@ -1249,7 +1283,7 @@ void loop()
           Serial.println(F("Volume Up"));        
           mp3.increaseVolume();
             volume = mp3.getVolume();               // Lautstärke abfragen und in Variable schreiben
-          //  Serial.println(volume);             
+          Serial.println(volume);             
           FastLED.setBrightness(BRIGHTNESS3);
           fill_solid(leds, NUM_LEDS, CRGB::Green);  //LEDs grün leuchten lassen   
           FastLED.show();
@@ -1270,9 +1304,11 @@ void loop()
         }
         else {
           nextButton();
+        #ifdef PLUSMINUS  
           digitalWrite(louderLED, HIGH);
           delay(250);
           digitalWrite(louderLED, LOW);
+        #endif  
         }
       }
       else {
@@ -1288,7 +1324,7 @@ void loop()
           Serial.println(F("Volume Down"));
           mp3.decreaseVolume();
             volume = mp3.getVolume();               // Lautstärke abfragen und in Variable schreiben
-          //  Serial.println(volume);
+          Serial.println(volume);
           FastLED.setBrightness(BRIGHTNESS3);
           fill_solid(leds, NUM_LEDS, CRGB::Red);    // Rot
           FastLED.show();
@@ -1309,9 +1345,11 @@ void loop()
         }
         else {
           previousButton();
+        #ifdef PLUSMINUS
           digitalWrite(lowerLED, HIGH);
           delay(250);
           digitalWrite(lowerLED, LOW);
+        #endif  
         }
       }
       else {
@@ -1330,8 +1368,6 @@ void loop()
     return;
 
   if (readCard(&myCard) == true) {
-    // make random a little bit more "random"
-    randomSeed(millis() + random(1000));
     if (myCard.cookie == cardCookie && myCard.nfcFolderSettings.folder != 0 && myCard.nfcFolderSettings.mode != 0) {
       playFolder();
     }
@@ -1399,7 +1435,7 @@ void adminMenu(bool fromCard = false) {
         return;
       }
     }
-  }                        
+  }
   int subMenu = voiceMenu(12, 900, 900, false, false, 0, true);
   if (subMenu == 0)
     return;
@@ -1510,7 +1546,6 @@ void adminMenu(bool fromCard = false) {
 
       // RFID Karte wurde aufgelegt
       if (mfrc522.PICC_ReadCardSerial()) {
-               
         Serial.println(F("schreibe Karte..."));
         writeCard(tempCard);
         delay(100);
@@ -1702,14 +1737,13 @@ void resetCard() {
 }
 
 bool setupFolder(folderSettings * theFolder) {
-            
   // Ordner abfragen
   theFolder->folder = voiceMenu(99, 301, 0, true, 0, 0, true);
   if (theFolder->folder == 0) return false;
 
   // Wiedergabemodus abfragen
   theFolder->mode = voiceMenu(9, 310, 310, false, 0, 0, true);
-  if (theFolder->mode == 0) return false; 
+  if (theFolder->mode == 0) return false;
 
   //  // Hörbuchmodus -> Fortschritt im EEPROM auf 1 setzen
   //  EEPROM.update(theFolder->folder, 1);
@@ -1718,7 +1752,6 @@ bool setupFolder(folderSettings * theFolder) {
   if (theFolder->mode == 4)
     theFolder->special = voiceMenu(mp3.getFolderTrackCount(theFolder->folder), 320, 0,
                                    true, theFolder->folder);
-
   // Admin Funktionen
   if (theFolder->mode == 6) {
     //theFolder->special = voiceMenu(3, 320, 320);
@@ -1749,7 +1782,6 @@ void setupCard() {
   }
   delay(1000);
 }
-
 bool readCard(nfcTagObject * nfcTag) {
   nfcTagObject tempCard;
   // Show some details of the PICC (that is: the tag/card)
@@ -1782,7 +1814,6 @@ bool readCard(nfcTagObject * nfcTag) {
   }
 
   if (status != MFRC522::STATUS_OK) {
-
     Serial.print(F("PCD_Authenticate() failed: "));
     Serial.println(mfrc522.GetStatusCodeName(status));
     return false;
@@ -1803,7 +1834,6 @@ bool readCard(nfcTagObject * nfcTag) {
     Serial.println(F(" ..."));
     status = (MFRC522::StatusCode)mfrc522.MIFARE_Read(blockAddr, buffer, &size);
     if (status != MFRC522::STATUS_OK) {
-
       Serial.print(F("MIFARE_Read() failed: "));
       Serial.println(mfrc522.GetStatusCodeName(status));
       return false;
@@ -1848,12 +1878,11 @@ bool readCard(nfcTagObject * nfcTag) {
   }
 
   Serial.print(F("Data on Card "));
-              
   Serial.println(F(":"));
   dump_byte_array(buffer, 16);
   Serial.println();
   Serial.println();
-            
+  
   uint32_t tempCookie;
   tempCookie = (uint32_t)buffer[0] << 24;
   tempCookie += (uint32_t)buffer[1] << 16;
@@ -1979,7 +2008,7 @@ void pride()
   }
 }
 #endif //LEDRING
-                                   
+
 void writeCard(nfcTagObject nfcTag) {
   MFRC522::PICC_Type mifareType;
   byte buffer[16] = {0x13, 0x37, 0xb3, 0x47, // 0x1337 0xb347 magic cookie to
