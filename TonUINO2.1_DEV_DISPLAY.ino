@@ -25,9 +25,9 @@ Orig DEV Version_Stand 12.5.2019 */
 */
 static const uint32_t cardCookie = 322417479;
 
-#define FIVEBUTTONS               // uncomment the line to enable five button support
-#define STATUSLED                 // 1/2 uncomment the two lines to enable the StatusLED
-#define statusLedPin 5            // 2/2 Pin für die Status LED
+//#define FIVEBUTTONS               // uncomment the line to enable five button support
+//#define STATUSLED                 // 1/2 uncomment the two lines to enable the StatusLED
+//#define statusLedPin 5            // 2/2 Pin für die Status LED
 //#define PLUSMINUS               // 1/3 uncomment if no LED Buttons are used
 //#define louderLED 7             // 2/3 Pin für Louder/Next LED
 //#define lowerLED 8              // 3/3 Pin für Lower/Previous LED
@@ -46,7 +46,6 @@ static const uint32_t cardCookie = 322417479;
   #define BRIGHTNESS1          3  // Helligkeit für FastLED Low (wenn z.B. KEINE Musik gespielt wird)
   #define BRIGHTNESS2          30 // Helligkeit für FastLED High (wenn z.B Musik gespielt wird)
   #define BRIGHTNESS3          50 // Helligkeit für FastLED bei Bestätigung z.B. Blinken o.ä.
-  #define BRIGHTNESS4          10 
   //#define FRAMES_PER_SECOND   120 
 #endif
 
@@ -54,13 +53,8 @@ static const uint32_t cardCookie = 322417479;
   #include <Wire.h>
   #include "SSD1306Ascii.h"
   #include "SSD1306AsciiWire.h"
-
-  // 0X3C+SA0 - 0x3C or 0x3D
   #define I2C_ADDRESS 0x3C
-
-  // Define proper RST_PIN if required.
   #define RST_PIN -1
-
   SSD1306AsciiWire oled;
 #endif
 
@@ -806,14 +800,11 @@ Serial.begin(115200); // Es gibt ein paar Debug Ausgaben über die serielle Schn
 #ifdef DISPLAYSUPPORT
   Wire.begin();
   Wire.setClock(400000L);
-#if RST_PIN >= 0
-  oled.begin(&Adafruit128x64, I2C_ADDRESS, RST_PIN);
-#else // RST_PIN >= 0
-  oled.begin(&Adafruit128x64, I2C_ADDRESS);
-#endif // RST_PIN >= 0
-  oled.setFont(System5x7);
-  oled.clear();
-  oled.print("Hello TonUINO!");
+    oled.begin(&Adafruit128x32, I2C_ADDRESS);
+    oled.setFont(Callibri11_bold);
+    // first row
+    oled.set2X();
+    oled.println("TonUINO 2.1");
 #endif //DISPLAYSUPPORT
    
   // Wert für randomSeed() erzeugen durch das mehrfache Sammeln von rauschenden LSBs eines offenen Analogeingangs
@@ -833,7 +824,7 @@ Serial.begin(115200); // Es gibt ein paar Debug Ausgaben über die serielle Schn
   Serial.println(F("TonUINO Version 2.1"));
   Serial.println(F("created by Thorsten Voß and licensed under GNU/GPL."));
   Serial.println(F("Information and contribution at https://tonuino.de.\n"));
-  Serial.println(F("+ Barni LED Ring + StatusLED and Display MOD "));
+  Serial.println(F("+ Barni LED Ring + StatusLED and Display MOD\n"));
 
   // Busy Pin
   pinMode(busyPin, INPUT);
@@ -886,11 +877,23 @@ Serial.begin(115200); // Es gibt ein paar Debug Ausgaben über die serielle Schn
 
   // Start Shortcut "at Startup" - e.g. Welcome Sound
   playShortCut(3);
-#ifdef LEDRING  
+/*#ifdef LEDRING  
   FastLED.clear ();                         // alle LEDs ausschalten
   FastLED.setBrightness(BRIGHTNESS1);
   FastLED.show();
-#endif            
+#endif
+*/            
+}
+
+void showvolume(){
+      oled.setFont(Callibri11);
+      oled.set1X();
+      oled.print("Ordner:");oled.print(currentTrack);
+      oled.set2X();
+      oled.setCursor(90, 0);
+      oled.setLetterSpacing(3);
+      oled.print(volume);
+      
 }
 
 void readButtons() {
@@ -914,6 +917,8 @@ void volumeUpButton() {
     volume++;
   }
   Serial.println(volume);
+  oled.clear();
+  showvolume();
 }
 
 void volumeDownButton() {
@@ -927,6 +932,8 @@ void volumeDownButton() {
     volume--;
   }
   Serial.println(volume);
+  oled.clear();
+  showvolume();
 }
 
 void nextButton() {
@@ -1044,6 +1051,7 @@ void playShortCut(uint8_t shortCut) {
     Serial.println(F("Shortcut not configured!"));
 }
 
+
 void loop() 
 {
   do {
@@ -1070,7 +1078,8 @@ void loop()
      }
     #endif
     #ifdef DISPLAYSUPPORT
-      
+      // second row
+      //showvolume();
     #endif
     
     mp3.loop();
