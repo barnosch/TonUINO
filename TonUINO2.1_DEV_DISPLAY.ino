@@ -1,5 +1,8 @@
 /* DEV  SSD1306 128x32 Display MOD
- Barnosch LED Ring Mod - 31.5.2019
+ *  ****
+ *  ** NOTE: WAY TO BIG FOR ALL FEATURES TO ENABLE
+ *  ***
+ Barnosch LED Ring Mod - 18.6.2019
 Optional: 5 Tasten 
 Optional: LED Ring (24) MOD
 Optional: Zusätzliche StatusLED auf PIN 5
@@ -13,16 +16,6 @@ Orig DEV Version_Stand 12.5.2019 */
 #include <SoftwareSerial.h>
 #include <avr/sleep.h>
 
-/*
-   _____         _____ _____ _____ _____
-  |_   _|___ ___|  |  |     |   | |     |
-    | | | . |   |  |  |-   -| | | |  |  |
-    |_| |___|_|_|_____|_____|_|___|_____|
-    TonUINO Version 2.1
-
-    created by Thorsten Voß and licensed under GNU/GPL.
-    Information and contribution at https://tonuino.de.
-*/
 static const uint32_t cardCookie = 322417479;
 
 //#define FIVEBUTTONS             // uncomment the line to enable five button support
@@ -32,8 +25,8 @@ static const uint32_t cardCookie = 322417479;
 //#define louderLED 7             // 2/3 Pin für Louder/Next LED
 //#define lowerLED 8              // 3/3 Pin für Lower/Previous LED
 //#define LEDRING                 // uncomment the line to enable LED RING support
-//#define DISPLAYSUPPORT            // uncomment to enable a simple Display Support - I2C SSD1306 128x32 || SSD1306Ascii.h library required  || 99%
-#define DISPLAY2                  //test with ss_oled and BitBang library  ||  83%
+#define DISPLAYSUPPORT            // uncomment to enable a simple Display Support - I2C SSD1306 128x32 || SSD1306Ascii.h library required
+
 
 #ifdef LEDRING
   #include <FastLED.h>            // FastLED-Library einbinden
@@ -46,7 +39,7 @@ static const uint32_t cardCookie = 322417479;
   #define BRIGHTNESS1          3  // Helligkeit für FastLED Low (wenn z.B. KEINE Musik gespielt wird)
   #define BRIGHTNESS2          30 // Helligkeit für FastLED High (wenn z.B Musik gespielt wird)
   #define BRIGHTNESS3          50 // Helligkeit für FastLED bei Bestätigung z.B. Blinken o.ä.
-  #define FRAMES_PER_SECOND   120 
+  //#define FRAMES_PER_SECOND   120 
 #endif
 
 #ifdef DISPLAYSUPPORT
@@ -56,11 +49,6 @@ static const uint32_t cardCookie = 322417479;
   #define I2C_ADDRESS 0x3C
   #define RST_PIN -1
   SSD1306AsciiWire oled;
-#endif
-#ifdef DISPLAY2
-  
-  #include <ss_oled.h>
-  #define USE_BACKBUFFER      //testen mit an und aus
 #endif
 
 // DFPlayer Mini
@@ -808,21 +796,13 @@ Serial.begin(115200); // Es gibt ein paar Debug Ausgaben über die serielle Schn
     oled.begin(&Adafruit128x32, I2C_ADDRESS);
     oled.setFont(Callibri11_bold);
     // first row
-    oled.set2X();
-    oled.println("TonUINO 2.1 Barni");
+    oled.set1X();
+    oled.println("  TonUINO 2.1");
+    oled.set1X();
+    oled.println("       Barni");
+    delay(3000);
+    showvolume();
 #endif //DISPLAYSUPPORT
-#ifdef DISPLAY2
-int rc;
-rc = oledInit(OLED_128x32, 0, 0, -1, -1,400000L); // use standard I2C bus at 400Khz   OLED_128x64
-   //rc = oledInit(OLED_128x64, 0, 0, 0xb0, 0xb2, 400000L); // for ATtiny85, use P0 as SDA and P2 as SCL
-  if (rc != OLED_NOT_FOUND)
-  {
-    char *msgs[] = {"SSD1306 @ 0x3C", "SSD1306 @ 0x3D","SH1106 @ 0x3C","SH1106 @ 0x3D"};
-    oledFill(0);
-    oledWriteString(0,0,msgs[rc], FONT_NORMAL, 0);
-    delay(2000);
-  } 
-#endif  
    
   // Wert für randomSeed() erzeugen durch das mehrfache Sammeln von rauschenden LSBs eines offenen Analogeingangs
   uint32_t ADC_LSB;
@@ -898,30 +878,28 @@ rc = oledInit(OLED_128x32, 0, 0, -1, -1,400000L); // use standard I2C bus at 400
   FastLED.clear ();                         // alle LEDs ausschalten
   FastLED.setBrightness(BRIGHTNESS1);
   FastLED.show();
-#endif
-            
+#endif         
 }
 
 #ifdef DISPLAYSUPPORT
 void showvolume(){
+  oled.clear();
   oled.setFont(Callibri11);
   oled.set1X();
-  oled.print("Ordner:");oled.print(currentTrack);
+  oled.print("#");oled.print(currentTrack);oled.print(" von ");oled.print(numTracksInFolder);
   oled.set2X();
   oled.setCursor(90, 0);
   oled.setLetterSpacing(3);
+  oled.setFont(Callibri11_bold);
   oled.print(volume);   
+}
+void disppause(){
+  oled.clear();
+  oled.set2X();
+  oled.print("Pause");
 }
 #endif
 
-#ifdef DISPLAY2   // oledSetPosition(x, y); || 
-void showvolume(){
-  oledFill(0x00);         // all off (0x00) or all on (0xff)
-  oledWriteString(16,0,currentTrack, FONT_NORMAL, 0);
-  oledWriteString(0,1,"TonUINO Barni", FONT_SMALL, 1);
-  oledWriteString(0,3,volume, FONT_LARGE, 0);  
-}
-#endif
 
 void readButtons() {
   pauseButton.read();
@@ -945,11 +923,6 @@ void volumeUpButton() {
   }
   Serial.println(volume);
   #ifdef DISPLAYSUPPORT
-  oled.clear();
-  showvolume();
-  #endif
-  #ifdef DISPLAY2
-  oledFill(0x0);
   showvolume();
   #endif
 }
@@ -966,11 +939,6 @@ void volumeDownButton() {
   }
   Serial.println(volume);
   #ifdef DISPLAYSUPPORT
-  oled.clear();
-  showvolume();
-  #endif
-  #ifdef DISPLAY2
-  oledFill(0x0);
   showvolume();
   #endif
 }
@@ -981,15 +949,10 @@ void nextButton() {
       return;
 
   nextTrack(random(65536));
-  delay(1000);
   #ifdef DISPLAYSUPPORT
-  oled.clear();
   showvolume();
   #endif
-  #ifdef DISPLAY2
-  oledFill(0x0);
-  showvolume();
-  #endif
+  delay(1000);
 }
 
 void previousButton() {
@@ -998,15 +961,10 @@ void previousButton() {
       return;
 
   previousTrack();
-  delay(1000);
  #ifdef DISPLAYSUPPORT
-  oled.clear();
   showvolume();
   #endif
-  #ifdef DISPLAY2
-  oledFill(0x0);
-  showvolume();
-  #endif
+  delay(1000);
 }
 
 void playFolder() {
@@ -1132,25 +1090,6 @@ void loop()
       digitalWrite(lowerLED, LOW); 
      }
     #endif
-    #ifdef DISPLAY2
-    // Demo
-    int i, x, y;
-    char szTemp[32];
-    
-      oledFill(0x0);
-      oledWriteString(16,0,"ss_oled Demo", FONT_NORMAL, 0);
-      oledWriteString(0,1,"Written by Larry Bank", FONT_SMALL, 1);
-      oledWriteString(0,3,"**Demo**", FONT_LARGE, 0);
-      delay(2000);
-      oledFill(0);
-      for (i=0; i<3000; i++)
-      {
-        x = random(128);
-        y = random(64);
-        oledSetPixel(x, y, 1);
-      }
-      delay(2000); 
-  #endif
     
     mp3.loop();
 
