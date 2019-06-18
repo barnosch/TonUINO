@@ -1,8 +1,10 @@
 # LED Ring Version - StatusLED - DEV Version
 
 SIMPLE DISPLAY Tests
+
 Trying with a very small library due to less space
-Already working: Showing current Volume and current file (number) on Volume change
+
+Already working: Showing current Volume and current file (number) but only on Volume Change
 
  
 <FastLED.h> Bibliothek wird zusätzlich für den LED Ring benötigt
