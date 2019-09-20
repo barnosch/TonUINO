@@ -8,8 +8,9 @@
 # LED Ring Version - StatusLED - DEV Version
  -Tonuino_2.1_LEDRing_StatusLED.ino-
  
-<FastLED.h> Bibliothek wird zusätzlich für den LED Ring benötigt
+<FastLED.h> Bibliothek wird zusätzlich für den LED Ring benötigt,
 alternativ in der V2 nun mit NeoPixel library.
+
 Alles Optional definierbar, siehe Code
 - 5 Tasten - 2 Zusätzliche Taster für die Lautstärke (A3 und A4)
 - StatusLED - PIN 5 (fadet bei Pause, AUS bei Play)
